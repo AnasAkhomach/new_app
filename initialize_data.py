@@ -4,8 +4,15 @@ def initialize_patients():
             "patient_id": "P001",
             "name": "John Doe",
             "dob": "1990-01-01",
-            "contact_info": "555-0100",
-            "medical_history": "None",
+            "contact_info": {
+                "phone": "555-0100",
+                "email": "john.doe@example.com"
+            },
+            "medical_history": [
+                {"condition": "Condition A", "date_diagnosed": "2018-05-01"},
+                {"condition": "Condition B", "date_diagnosed": "2019-11-15"},
+                # Add more medical history records as needed
+            ],
             "privacy_consent": True
         },
         # Add more patient documents as needed...
@@ -17,7 +24,16 @@ def initialize_staff_members():
             "staff_id": "S001",
             "name": "Jane Smith",
             "role": "Nurse",
-            "contact_info": "555-0101"
+            "specialization": None,  # This can be null/None for non-surgeons
+            "contact_info": {
+                "phone": "555-0101",
+                "email": "jane.smith@example.com"
+            },
+            "availability_schedule": [
+                {"day": "Monday", "start": "08:00", "end": "17:00"},
+                {"day": "Tuesday", "start": "08:00", "end": "17:00"},
+                # Add more availability slots as needed
+            ]
         },
         # Add more staff member documents as needed...
     ]
@@ -49,11 +65,14 @@ def initialize_surgeries():
         {
             "surgery_id": "SUR001",
             "patient_id": "P001",
-            "scheduled_date": None,  # Use appropriate format or real date
+            "scheduled_date": "2023-07-01",  # Use an actual date
+            "estimated_start_time": "08:00",  # New
+            "estimated_end_time": "10:00",  # New
             "surgery_type": "Appendectomy",
             "urgency_level": "High",
             "duration": 120,
-            "status": "Scheduled"
+            "status": "Scheduled",
+            "priority": "Normal"
         },
         # Add more surgery documents as needed...
     ]
@@ -100,4 +119,24 @@ def initialize_surgery_staff_assignments():
             "role": "Surgeon"
         },
         # Add more surgery staff assignment documents as needed...
+    ]
+
+def initialize_surgery_appointments():
+    return [
+        {
+            "appointment_id": "APPT001",
+            "surgery_id": "SUR001",
+            "patient_id": "P001",
+            "staff_assignments": [
+                {
+                    "staff_id": "S002",
+                    "role": "Lead Surgeon"
+                }
+                # Add more staff assignments as needed
+            ],
+            "room_id": "OR001",
+            "start_time": "2023-07-01T09:00:00",
+            "end_time": "2023-07-01T11:00:00"
+        },
+        # Add more appointments as needed...
     ]

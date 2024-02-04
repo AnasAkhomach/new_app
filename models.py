@@ -65,12 +65,87 @@ class SurgeryRoomAssignment:
         self.assignment_id = assignment_id
         self.surgery_id = surgery_id
         self.room_id = room_id
-        self.start_time = datetime.datetime.strptime(start_time, '%Y-%m-%d %H:%M') if isinstance(start_time, str) else start_time
-        self.end_time = datetime.datetime.strptime(end_time, '%Y-%m-%d %H:%M') if isinstance(end_time, str) else end_time
+        self.start_time = datetime.datetime.strptime(start_time, '%Y-%m-%dT%H:%M:%S') if isinstance(start_time, str) else start_time
+        
+    def to_document(self):
+        """Converts the instance into a dictionary suitable for MongoDB."""
+        return {
+            "assignment_id": self.assignment_id,
+            "surgery_id": self.surgery_id,
+            "room_id": self.room_id,
+            "start_time": self.start_time,
+            "end_time": self.end_time
+        }
 
-class SurgeryStaffAssignment:
-    def __init__(self, assignment_id, surgery_id, staff_id, role):
+class SurgeryRoomAssignment:
+    def __init__(self, assignment_id, surgery_id, room_id, start_time, end_time):
         self.assignment_id = assignment_id
         self.surgery_id = surgery_id
+        self.room_id = room_id
+        self.start_time = start_time
+        self.end_time = end_time
+    
+    def to_document(self):
+        return {
+            "assignment_id": self.assignment_id,
+            "surgery_id": self.surgery_id,
+            "room_id": self.room_id,
+            "start_time": self.start_time,
+            "end_time": self.end_time
+        }
+
+
+class StaffAssignment:
+    def __init__(self, staff_id, role):
         self.staff_id = staff_id
         self.role = role
+
+    def __str__(self):
+        return f"{self.role} - {self.staff_id}"
+
+    def to_document(self):
+        """Converts the StaffAssignment instance into a dictionary suitable for MongoDB."""
+        return {
+            "staff_id": self.staff_id,
+            "role": self.role
+        }
+
+    @staticmethod
+    def save(appointment, db):
+        document = appointment.to_document()
+        db.surgery_appointments.insert_one(document)
+
+class SurgeryAppointment:
+    def __init__(self, appointment_id, surgery_id, patient_id, staff_assignments, room_id, start_time, end_time):
+        self.appointment_id = appointment_id
+        self.surgery_id = surgery_id
+        self.patient_id = patient_id
+        self.staff_assignments = [StaffAssignment(**sa) for sa in staff_assignments]  # Convert dicts to StaffAssignment objects
+        self.room_id = room_id
+        self.start_time = start_time
+        self.end_time = end_time
+
+    @staticmethod
+    def from_document(document):
+        staff_assignments = [StaffAssignment(sa["staff_id"], sa["role"]) for sa in document["staff_assignments"]]
+        return SurgeryAppointment(
+            document["appointment_id"],
+            document["surgery_id"],
+            document["patient_id"],
+            staff_assignments,
+            document["room_id"],
+            document["start_time"],
+            document["end_time"]
+        )
+ 
+    def to_document(self):
+        """Converts the SurgeryAppointment instance into a dictionary suitable for MongoDB."""
+        return {
+            "appointment_id": self.appointment_id,
+            "surgery_id": self.surgery_id,
+            "patient_id": self.patient_id,
+            "staff_assignments": [{"staff_id": sa.staff_id, "role": sa.role} for sa in self.staff_assignments],
+            "room_id": self.room_id,
+            "start_time": self.start_time,
+            "end_time": self.end_time
+        }

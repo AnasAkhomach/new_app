@@ -11,8 +11,11 @@ from initialize_data import (
     initialize_surgery_equipments,
     initialize_surgery_equipment_usages,
     initialize_surgery_room_assignments,
-    initialize_surgery_staff_assignments
+    initialize_surgery_staff_assignments,
+    initialize_surgery_appointments
 )
+from db_config import surgery_appointments_collection
+
 
 # Load environment variables
 load_dotenv()
@@ -36,6 +39,12 @@ surgery_equipment_usage_collection = db.surgery_equipment_usage
 surgery_room_assignments_collection = db.surgery_room_assignments
 surgery_staff_assignments_collection = db.surgery_staff_assignments
 
+def seed_surgery_appointments():
+    appointments_data = initialize_surgery_appointments()
+    surgery_appointments_collection.insert_many(appointments_data)
+
+
+
 def seed_collection(collection, data_initializer):
     """Helper function to seed a collection with data."""
     data = data_initializer()
@@ -43,6 +52,8 @@ def seed_collection(collection, data_initializer):
         collection.insert_many(data)
     else:
         print(f"No data to insert for collection {collection.name}")
+
+
 
 if __name__ == "__main__":
     # Seed the collections with initial data
@@ -55,5 +66,8 @@ if __name__ == "__main__":
     seed_collection(surgery_equipment_usage_collection, initialize_surgery_equipment_usages)
     seed_collection(surgery_room_assignments_collection, initialize_surgery_room_assignments)
     seed_collection(surgery_staff_assignments_collection, initialize_surgery_staff_assignments)
+    seed_surgery_appointments()  # Add this line to seed surgery appointments
 
     print("Database seeding completed.")
+    print("Database seeding completed, including surgery appointments.")
+
