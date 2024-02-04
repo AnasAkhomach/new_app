@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from models import Surgeon, OperatingRoom
 
+
 def shift_time(current_time_str, delta_minutes):
     """
     Shifts the given time string by delta_minutes and returns the new time as a string.
@@ -85,4 +86,31 @@ def check_equipment_availability(surgeries, equipment_inventory):
             if not equipment_inventory.get(equipment_id, False):
                 score += penalty_per_unavailable_item
     return score
+
+def is_surgeon_available(surgeon, proposed_start, proposed_end):
+    # Assuming availability is a list of (start, end) tuples
+    for available_start, available_end in surgeon.availability:
+        if proposed_start >= available_start and proposed_end <= available_end:
+            return True
+    return False
+
+def is_equipment_available(surgery, proposed_start, proposed_end, equipment_inventory):
+    required_equipment_ids = surgery.required_equipment_ids  # IDs of required equipment
+    for equipment_id in required_equipment_ids:
+        if not equipment_inventory[equipment_id].is_available(proposed_start, proposed_end):
+            return False
+    return True
+
+def get_least_used_room(operating_rooms, room_assignments):
+    room_usage = {room.room_id: 0 for room in operating_rooms}
+    for assignment in room_assignments:
+        duration = (assignment.end_time - assignment.start_time).total_seconds() / 60
+        room_usage[assignment.room_id] += duration
+    return min(room_usage, key=room_usage.get)
+
+def create_new_neighbor(self, surgery, new_room_id, new_start_time=None, new_end_time=None):
+        # This method should clone the current schedule and apply the changes for the given surgery
+        # to produce a new 'neighbor' schedule. Implement cloning of the current state and apply modifications.
+        # Return the modified schedule as a new neighbor.
+    pass
 
