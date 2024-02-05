@@ -1,6 +1,6 @@
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-from time import timedelta
+from datetime import timedelta
 import logging
 
 logger = logging.getLogger(__name__)
