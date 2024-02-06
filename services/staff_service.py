@@ -14,25 +14,49 @@ class StaffService:
         try:
             document = staff_data.to_document()
             db.staff.insert_one(document)
-            print(f"Staff {document['staff_id']} created successfully.")
+            print(f"Staff {document['name']} created successfully.")
         except PyMongoError as e:
             print(f"Error creating staff: {e}")
+
+    @staticmethod
+    def get_staff(staff_id):
+        """Retrieves a staff by staff_id and returns a Staff instance."""
+        try:
+            document = db.staff.find_one({"staff_id": staff_id})
+            if document:
+                return Staff.from_document(document)
+            else:
+                print(f"No staff found with ID {staff_id}")
+                return None
+        except PyMongoError as e:
+            print(f"Error retrieving staff: {e}")
+            return None
 
     @staticmethod
     def update_staff(staff_id, update_fields):
         """Updates an existing staff record."""
         try:
-            result = db.staff.update_one(
-                {"staff_id": staff_id},
-                {"$set": update_fields}
-            )
-            if result.modified_count:
-                print(f"Staff {staff_id} updated successfully.")
-            else:
-                print(f"No changes made to staff {staff_id}.")
+            db.staff.update_one({"staff_id": staff_id}, {"$set": update_fields})
+            print(f"Staff {staff_id} updated successfully.")
         except PyMongoError as e:
             print(f"Error updating staff: {e}")
 
+    @staticmethod
+    def delete_staff(staff_id):
+        """Deletes a staff record."""
+        try:
+            db.staff.delete_one({"staff_id": staff_id})
+            print(f"Staff {staff_id} deleted successfully.")
+        except PyMongoError as e:
+            print(f"Error deleting staff: {e}")
+
+# Example usage
+if __name__ == "__main__":
+    try:
+        new_staff = Staff("STAFF001", "John Doe", "Nurse", "contact@example.com", "Cardiology", [("2023-01-01", "2023-12-31")])
+        StaffService.create_staff(new_staff)
+    except Exception as e:
+        print(f"An error occurred: {e}")
     @staticmethod
     def delete_staff(staff_id):
         """Deletes a staff record."""

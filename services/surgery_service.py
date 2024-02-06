@@ -52,6 +52,21 @@ class SurgeryService:
         except PyMongoError as e:
             logger.error(f"Error deleting surgery: {e}")
 
+    @staticmethod
+    def get_surgery(surgery_id):
+        """Fetches a surgery by its ID."""
+        try:
+            document = db.surgeries.find_one({"surgery_id": surgery_id})
+            if document:
+                return Surgery.from_document(document)
+            else:
+                print("Surgery not found.")
+                return None
+        except PyMongoError as e:
+            print(f"Error fetching surgery: {e}")
+            return None
+
+
     def schedule_surgery(self, surgeon, surgery_details):
         """Schedules a surgery, updates the surgeon's calendar, and sends notifications."""
         try:

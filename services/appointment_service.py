@@ -1,7 +1,10 @@
-from models import SurgeryAppointment, StaffAssignment
-from db_config import db
-from pymongo.errors import PyMongoError  # Import PyMongo error for handling database errors
 from pymongo.errors import PyMongoError
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from db_config import db
+
+from models import SurgeryAppointment, StaffAssignment
 from datetime import datetime
 
 class AppointmentService:
@@ -93,3 +96,45 @@ class AppointmentService:
         except PyMongoError as e:
             print(f"Database error checking staff availability: {e}")
             return False
+
+    @staticmethod
+    def get_appointment_by_id(appointment_id):
+        """Retrieves a surgery appointment by its ID."""
+        try:
+            document = db.surgery_appointments.find_one({"appointment_id": appointment_id})
+            return SurgeryAppointment.from_document(document) if document else None
+        except PyMongoError as e:
+            print(f"Error retrieving appointment: {e}")
+            return None
+        
+    @staticmethod
+    def update_appointment(appointment_id, update_data):
+        """Updates an existing surgery appointment."""
+        try:
+            db.surgery_appointments.update_one(
+                {"appointment_id": appointment_id},
+                {"$set": update_data}
+            )
+            print(f"Appointment {appointment_id} updated successfully.")
+        except PyMongoError as e:
+            print(f"Error updating appointment: {e}")
+
+    @staticmethod
+    def delete_appointment(appointment_id):
+        """Deletes a surgery appointment."""
+        try:
+            db.surgery_appointments.delete_one({"appointment_id": appointment_id})
+            print(f"Appointment {appointment_id} deleted successfully.")
+        except PyMongoError as e:
+            print(f"Error deleting appointment: {e}")
+
+# Example usage
+if __name__ == "__main__":
+    # Example to create a new appointment
+    new_appointment = SurgeryAppointment(
+        "APPT001", "SUR001", "P001", 
+        [{"staff_id": "STAFF001", "role": "Lead Surgeon"}], 
+        "OR001", "2023-08-01T09:00:00", "2023-08-01T11:00:00"
+    )
+    #AppointmentService.create_surgery_appointment(new_appointment)
+    AppointmentService.create_surgery_appointment("APPT001", "SUR001", "P001", [{"staff_id": "STAFF001", "role": "Lead Surgeon"}], "OR001", "2023-08-01T09:00:00", "2023-08-01T11:00:00")

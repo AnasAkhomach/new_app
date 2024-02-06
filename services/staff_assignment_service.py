@@ -1,8 +1,13 @@
 # staff_assignment_service.py
 
-from db_config import db
 from pymongo.errors import PyMongoError
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from db_config import db
 from bson.objectid import ObjectId
+from models import StaffAssignment
+
 
 class StaffAssignmentService:
     @staticmethod
@@ -52,6 +57,20 @@ class StaffAssignmentService:
                 print("Surgery appointment or staff assignment not found.")
         except PyMongoError as e:
             print(f"Error removing staff assignment due to a database issue: {e}")
+
+    @staticmethod
+    def get_staff_assignment(assignment_id):
+        """Fetches a staff assignment by its ID."""
+        try:
+            document = db.staff_assignments.find_one({"assignment_id": assignment_id})
+            if document:
+                return StaffAssignment.from_document(document)
+            else:
+                print("Staff assignment not found.")
+                return None
+        except PyMongoError as e:
+            print(f"Error fetching staff assignment: {e}")
+            return None
 
 # Example usage of the StaffAssignmentService
 if __name__ == "__main__":

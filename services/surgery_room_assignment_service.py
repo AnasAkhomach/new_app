@@ -61,6 +61,20 @@ class SurgeryRoomAssignmentService:
         except PyMongoError as e:
             print(f"Error deleting surgery room assignment: {e}")
 
+    @staticmethod
+    def get_assignment(assignment_id):
+        """Fetches a room assignment by its ID."""
+        try:
+            document = db.surgery_room_assignments.find_one({"assignment_id": assignment_id})
+            if document:
+                return SurgeryRoomAssignment.from_document(document)
+            else:
+                print("Room assignment not found.")
+                return None
+        except PyMongoError as e:
+            print(f"Error fetching room assignment: {e}")
+            return None
+
 # Example usage
 if __name__ == "__main__":
     

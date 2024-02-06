@@ -46,6 +46,20 @@ class SurgeryEquipmentUsageService:
         except PyMongoError as e:
             print(f"Error deleting surgery equipment usage: {e}")
 
+    @staticmethod
+    def get_usage(usage_id):
+        """Fetches an equipment usage by its ID."""
+        try:
+            document = db.surgery_equipment_usage.find_one({"usage_id": usage_id})
+            if document:
+                return SurgeryEquipmentUsage.from_document(document)
+            else:
+                print("Equipment usage not found.")
+                return None
+        except PyMongoError as e:
+            print(f"Error fetching equipment usage: {e}")
+            return None
+
 # Example usage
 if __name__ == "__main__":
     # Example surgery equipment usage data initialization

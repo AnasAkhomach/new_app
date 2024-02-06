@@ -1,7 +1,6 @@
 # surgery_staff_assignment_service.py
 
 from pymongo.errors import PyMongoError
-from bson.objectid import ObjectId
 # Import the necessary class from models.py
 import sys
 import os
@@ -47,6 +46,14 @@ class SurgeryStaffAssignmentService:
                 print(f"Surgery staff assignment {assignment_id} not found.")
         except PyMongoError as e:
             print(f"Error deleting surgery staff assignment: {e}")
+
+    @staticmethod
+    def get_surgery_staff_assignment_by_id(assignment_id):
+        try:
+            document = db.surgery_staff_assignments.find_one({"assignment_id": assignment_id})
+            return SurgeryStaffAssignment.from_document(document) if document else None
+        except PyMongoError as e:
+            print(f"Error retrieving surgery staff assignment: {e}")
 
 # Example usage
 if __name__ == "__main__":
