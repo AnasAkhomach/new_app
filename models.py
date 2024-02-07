@@ -23,7 +23,6 @@ class OperatingRoom:
             "equipment_list": self.equipment_list
         }
 
-
 class Patient:
     def __init__(self, patient_id, name, dob, contact_info, medical_history, privacy_consent):
         self.patient_id = patient_id
@@ -55,7 +54,6 @@ class Patient:
             "medical_history": self.medical_history,
             "privacy_consent": self.privacy_consent
         }
-
 
 class Staff:
     def __init__(self, staff_id, name, role, contact_info, specialization=None, availability=None):
@@ -90,7 +88,6 @@ class Staff:
         }
         return document
 
-
 class Surgeon(Staff):
     def __init__(self, staff_id, name, role, contact_info, specialization, availability):
         super().__init__(staff_id, name, role, contact_info)
@@ -106,14 +103,19 @@ class Surgeon(Staff):
         return document
 
 class Surgery:
-    def __init__(self, surgery_id, patient_id, scheduled_date, surgery_type, urgency_level, duration, status):
+    def __init__(self, surgery_id, patient_id, surgeon_id, room_id, scheduled_date, surgery_type, urgency_level, duration, status, start_time, end_time, required_equipment_ids):
         self.surgery_id = surgery_id
         self.patient_id = patient_id
+        self.surgeon_id = surgeon_id
+        self.room_id = room_id
         self.scheduled_date = scheduled_date
         self.surgery_type = surgery_type
         self.urgency_level = urgency_level
         self.duration = duration
         self.status = status
+        self.start_time = start_time
+        self.end_time = end_time
+        self.required_equipment_ids = required_equipment_ids
 
     @staticmethod
     def from_document(document):
@@ -121,24 +123,35 @@ class Surgery:
         return Surgery(
             surgery_id=document.get("surgery_id"),
             patient_id=document.get("patient_id"),
+            surgeon_id=document.get("surgeon_id"),
+            room_id=document.get("room_id"),
             scheduled_date=document.get("scheduled_date"),
             surgery_type=document.get("surgery_type"),
             urgency_level=document.get("urgency_level"),
             duration=document.get("duration"),
-            status=document.get("status")
+            status=document.get("status"),
+            start_time=document.get("start_time"),
+            end_time=document.get("end_time"),
+            required_equipment_ids=document.get("required_equipment_ids", [])
         )
 
     def to_document(self):
-        """Converts a Surgery instance into a MongoDB document."""
+        """Converts the Surgery instance into a MongoDB document."""
         return {
             "surgery_id": self.surgery_id,
             "patient_id": self.patient_id,
+            "surgeon_id": self.surgeon_id,
+            "room_id": self.room_id,
             "scheduled_date": self.scheduled_date,
             "surgery_type": self.surgery_type,
             "urgency_level": self.urgency_level,
             "duration": self.duration,
-            "status": self.status
+            "status": self.status,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "required_equipment_ids": self.required_equipment_ids,
         }
+
 
 # NOT FINISED YET NEEDS TO Obtain token.json
 

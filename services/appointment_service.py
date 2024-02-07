@@ -137,4 +137,11 @@ if __name__ == "__main__":
         "OR001", "2023-08-01T09:00:00", "2023-08-01T11:00:00"
     )
     #AppointmentService.create_surgery_appointment(new_appointment)
-    AppointmentService.create_surgery_appointment("APPT001", "SUR001", "P001", [{"staff_id": "STAFF001", "role": "Lead Surgeon"}], "OR001", "2023-08-01T09:00:00", "2023-08-01T11:00:00")
+    #AppointmentService.create_surgery_appointment("APPT001", "SUR001", "P001", [{"staff_id": "STAFF001", "role": "Lead Surgeon"}], "OR001", "2023-08-01T09:00:00", "2023-08-01T11:00:00")
+    # Correct method call based on the provided code snippet
+AppointmentService.create_surgery_appointment(
+    "APPT001", "SUR001", "P001", 
+    [{"staff_id": "STAFF001", "role": "Lead Surgeon"}], 
+    "OR001", "2023-08-01T09:00:00", "2023-08-01T11:00:00"
+)
+

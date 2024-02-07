@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
+from contextlib import contextmanager
 
 
 load_dotenv()
@@ -23,3 +24,17 @@ surgery_appointments_collection = db.surgery_appointments
 surgery_equipment_usage_collection = db.surgery_equipment_usage
 surgery_room_assignments_collection = db.surgery_room_assignments
 surgery_staff_assignments_collection = db.surgery_staff_assignments
+
+
+@contextmanager
+def mongodb_transaction():
+    session = client.start_session()
+    session.start_transaction()
+    try:
+        yield session
+        session.commit_transaction()
+    except Exception as e:
+        session.abort_transaction()
+        raise e
+    finally:
+        session.end_session()

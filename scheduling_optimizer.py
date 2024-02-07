@@ -8,11 +8,11 @@ from initialize_data import (initialize_patients, initialize_staff_members, init
                              initialize_surgery_staff_assignments)
 
 from scheduling_utils import (
-    shift_time, find_surgeon, is_room_available,
+    shift_surgery_time, find_surgeon, is_room_available,
     calculate_room_utilization, check_equipment_availability, is_surgeon_available,
     is_equipment_available, get_least_used_room, create_new_neighbor,
-    assign_surgery_to_room, shift_surgery_time,
-    can_swap_surgeons, swap_surgeons,
+    assign_surgery_to_room, shift_surgery_time, can_swap_surgeries,
+    can_swap_surgeons, find_next_available_time_slot, evaluate_surgeon_preference
 )
 
 import random
@@ -23,63 +23,131 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+from pymongo import MongoClient, errors
+from db_config import db
+from db_config import mongodb_transaction
+
+
+
 
 class TabuSearchScheduler:
-    def __init__(self, surgeries, operating_rooms, surgeons, surgery_equipments, surgery_equipment_usages):
-        self.surgeries = surgeries
-        self.operating_rooms = operating_rooms
-        self.surgeons = surgeons
-        self.surgery_equipments = surgery_equipments
-        self.surgery_equipment_usages = surgery_equipment_usages
-        self.tabu_list = []
-        self.best_solution = None
-        self.best_cost = float('inf')
+    def __init__(self, db):
+        self.db = db
 
-    patients = initialize_patients()
-    staff_members = initialize_staff_members()
-    surgeons = initialize_surgeons()
-    operating_rooms = initialize_operating_rooms()
-    surgeries = initialize_surgeries()
-    surgery_equipments = initialize_surgery_equipments()
-    surgery_equipment_usages = initialize_surgery_equipment_usages()
-    surgery_room_assignments = initialize_surgery_room_assignments()
-    surgery_staff_assignments = initialize_surgery_staff_assignments()
-    
+    def find_next_available_time(self, room_id):
+        with mongodb_transaction() as session:
+            try:
+                # Define setup and cleanup times (in minutes)
+                setup_time = 15
+                cleanup_time = 15
 
-    def generate_neighbors(self):
-        neighbors = []    
-        # Iterate through surgeries to generate neighbor solutions
-        for i, current_surgery in enumerate(self.surgeries):
-            # Temporarily hold the current state to revert changes if needed
-            temp_surgeries = copy.deepcopy(self.surgeries)
-            temp_room_assignments = copy.deepcopy(self.surgery_room_assignments)
+                # Find the latest end time for the given room
+                latest_appointment = self.db.surgery_room_assignments.find_one(
+                    {"room_id": room_id},
+                    sort=[("end_time", -1)],
+                    session=session
+                )
 
-            # 1. Attempt to swap surgeries between rooms
-            for room in self.operating_rooms:
-                if self.is_change_possible(current_surgery, room.room_id):
-                    # Create a new neighbor with the surgery assigned to a different room
-                    self.assign_surgery_to_room(current_surgery, room.room_id)
-                    neighbors.append((copy.deepcopy(self.surgeries), copy.deepcopy(self.surgery_room_assignments)))
-                    # Revert to the original state after adding the neighbor
-                    self.surgeries = temp_surgeries
-                    self.surgery_room_assignments = temp_room_assignments
-            
-            # 2. Attempt to shift surgery times
-            for shift in [-30, 30]:  # Example: shifting times by +/- 30 minutes
-                if self.shift_surgery_time(current_surgery, shift):
-                    neighbors.append((copy.deepcopy(self.surgeries), copy.deepcopy(self.surgery_room_assignments)))
-                    # Revert to original state after adding the neighbor
-                    self.surgeries = temp_surgeries
-                    self.surgery_room_assignments = temp_room_assignments
-            
-            # 3. Attempt to swap surgeries between surgeons with similar expertise
-            for other_surgery in self.surgeries:
-                if self.can_swap_surgeons(current_surgery, other_surgery):
-                    self.swap_surgeons(current_surgery, other_surgery)
-                    neighbors.append((copy.deepcopy(self.surgeries), copy.deepcopy(self.surgery_room_assignments)))
-                    # Revert to original state after adding the neighbor
-                    self.surgeries = temp_surgeries
-                    self.surgery_room_assignments = temp_room_assignments
+                if latest_appointment:
+                    latest_end_time = datetime.strptime(latest_appointment['end_time'], "%Y-%m-%dT%H:%M:%S")
+                    next_available_start = latest_end_time + timedelta(minutes=cleanup_time)
+                else:
+                    next_available_start = datetime.now() + timedelta(minutes=setup_time)
+                
+                return next_available_start.isoformat()
+            except errors.PyMongoError as e:
+                print(f"Database error while finding next available time: {e}")
+                return None
+
+    def assign_surgery_to_room_and_time(self, surgery_id, room_id, start_time_str):
+        with mongodb_transaction() as session:
+            try:
+                surgery = self.db.surgeries.find_one({"_id": surgery_id}, session=session)
+                if not surgery:
+                    print(f"Surgery with ID {surgery_id} not found.")
+                    return False
+                
+                start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%S")
+                end_time = start_time + timedelta(minutes=surgery['duration'])
+
+                # Create a surgery room assignment document
+                room_assignment = {
+                    "surgery_id": surgery_id,
+                    "room_id": room_id,
+                    "start_time": start_time.isoformat(),
+                    "end_time": end_time.isoformat(),
+                }
+                
+                # Insert the assignment into MongoDB
+                self.db.surgery_room_assignments.insert_one(room_assignment, session=session)
+                print(f"Surgery {surgery_id} assigned to room {room_id} at {start_time_str} successfully.")
+                return True
+            except errors.PyMongoError as e:
+                print(f"Failed to assign surgery due to database error: {e}")
+                return False
+
+    def initialize_solution(self):
+        """
+        Generates an initial feasible solution by assigning surgeries to available times and rooms.
+        Ensures no conflicts with surgeon availability, room availability, and equipment availability.
+        """
+        with mongodb_transaction(self.db) as session:
+            surgeries = list(self.db.surgeries.find({"status": "Scheduled"}, session=session))
+            rooms = list(self.db.operating_rooms.find({}, session=session))
+
+            for surgery in surgeries:
+                for room in rooms:
+                    # Attempt to find the next available time for the surgery in the current room
+                    next_available_time = self.find_next_available_time(room["_id"], surgery["duration"], self.db, session)
+                    if next_available_time:
+                        # Check if the surgeon and required equipment are available at this time
+                        surgeon_available = is_surgeon_available(surgery["surgeon_id"], next_available_time["start_time"], next_available_time["end_time"], self.db, session)
+                        equipment_available = is_equipment_available(surgery["_id"], next_available_time["start_time"], next_available_time["end_time"], self.db, session)
+
+                        if surgeon_available and equipment_available:
+                            # Assign the surgery to this room and time slot
+                            self.assign_surgery_to_room_and_time(surgery["_id"], room["_id"], next_available_time["start_time"], self.db, session)
+                            break
+
+    def generate_neighbor_solutions(current_schedule, tabu_list, db):
+        neighbors = []
+        surgeries = list(db.surgeries.find({"status": "Scheduled"}))
+
+        # Sample a subset of surgeries to limit computational expense
+        sampled_surgeries = random.sample(surgeries, min(len(surgeries), 5))  # Adjust the sample size as needed
+
+        for surgery in sampled_surgeries:
+            surgery_id = surgery["_id"]
+            # Attempt to reassign each sampled surgery to a different room or time slot
+            for room in db.operating_rooms.find():
+                room_id = room["_id"]
+                if (surgery_id, room_id) in tabu_list:
+                    continue  # Skip if this move is in the Tabu List
+                
+                # Check if the room is available for the surgery
+                new_start_time, new_end_time = find_next_available_time_slot(surgery, room, db)
+                if new_start_time and new_end_time:
+                    # Clone the current schedule and apply the change
+                    neighbor = current_schedule.clone()
+                    neighbor.reassign_surgery(surgery_id, room_id, new_start_time, new_end_time)
+                    if neighbor.is_feasible(db):
+                        neighbors.append(neighbor)
+
+        # Generate swap moves between surgeries
+        for i in range(len(sampled_surgeries)):
+            for j in range(i + 1, len(sampled_surgeries)):
+                surgery1 = sampled_surgeries[i]
+                surgery2 = sampled_surgeries[j]
+                if (surgery1["_id"], surgery2["_id"]) in tabu_list or (surgery2["_id"], surgery1["_id"]) in tabu_list:
+                    continue  # Skip if this swap is in the Tabu List
+
+                # Check if swapping is feasible
+                if can_swap_surgeries(surgery1, surgery2, db):
+                    # Clone the current schedule and apply the swap
+                    neighbor = current_schedule.clone()
+                    neighbor.swap_surgeries(surgery1["_id"], surgery2["_id"])
+                    if neighbor.is_feasible(db):
+                        neighbors.append(neighbor)
 
         return neighbors
 
@@ -107,18 +175,18 @@ class TabuSearchScheduler:
                     if not (surgery.end_time <= other_surgery.start_time or surgery.start_time >= other_surgery.end_time):
                         return False
 
-        # Check for operating room availability and avoid overlapping surgeries in the same room
-        for assignment in room_assignments:
-            room = next((r for r in self.operating_rooms if r.room_id == assignment.room_id), None)
-            if room is None:
-                return False
-            
-            for other_assignment in room_assignments:
-                if other_assignment.room_id == assignment.room_id and other_assignment != assignment:
-                    if not (assignment.end_time <= other_assignment.start_time or assignment.start_time >= other_assignment.end_time):
-                        return False
+            # Check for operating room availability and avoid overlapping surgeries in the same room
+            for assignment in room_assignments:
+                room = next((r for r in self.operating_rooms if r.room_id == assignment.room_id), None)
+                if room is None:
+                    return False
+                
+                for other_assignment in room_assignments:
+                    if other_assignment.room_id == assignment.room_id and other_assignment != assignment:
+                        if not (assignment.end_time <= other_assignment.start_time or assignment.start_time >= other_assignment.end_time):
+                            return False
 
-        return True
+            return True
 
     def run(self):
         # The main method to run the Tabu Search optimization ...
@@ -154,6 +222,46 @@ class TabuSearchScheduler:
         
         # Update class attributes or database with new assignments
         self.room_assignments = new_room_assignments
+
+    def evaluate_solution(surgery_assignments, db):
+        """
+        Evaluates a solution based on operating room utilization, surgeon preferences,
+        equipment availability, and other relevant metrics.
+
+        Args:
+            surgery_assignments (list): A list of dictionaries representing surgery assignments,
+                                        each containing surgery_id, room_id, start_time, and end_time.
+            db: The MongoDB database connection.
+
+        Returns:
+            float: The overall score of the solution, where a higher score indicates a better solution.
+        """
+        room_utilization_score = 0.0
+        surgeon_preference_score = 0.0
+        equipment_availability_score = 0.0
+
+        # Evaluate operating room utilization
+        room_utilizations = calculate_room_utilization(surgery_assignments, db)
+        for room_id, utilization in room_utilizations.items():
+            # Adjust scoring logic based on utilization rates
+            room_utilization_score += utilization
+
+        # Evaluate surgeon preferences (this requires additional data on surgeon preferences)
+        for assignment in surgery_assignments:
+            surgeon_id = assignment['surgeon_id']
+            surgeon_preference_score += evaluate_surgeon_preference(surgeon_id, assignment, db)
+
+        # Evaluate equipment availability (assuming surgeries may be penalized for equipment issues)
+        for assignment in surgery_assignments:
+            surgery_id = assignment['surgery_id']
+            if not check_equipment_availability(surgery_id, assignment['start_time'], assignment['end_time'], db):
+                equipment_availability_score -= 10  # Penalize the solution for each equipment availability issue
+
+        # Combine scores from different criteria (adjust weights as necessary)
+        overall_score = room_utilization_score + surgeon_preference_score + equipment_availability_score
+
+        return overall_score
+
 
     def is_change_possible(self, surgery, new_room_id):
         """
