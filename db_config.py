@@ -1,19 +1,10 @@
 from pymongo import MongoClient
 import os
-from dotenv import load_dotenv
 from contextlib import contextmanager
-
-
-load_dotenv()
-
-# MongoDB connection details from environment variables or default
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-DATABASE_NAME = os.getenv("MONGO_DATABASE_NAME", "default_db_name") 
-
-client = MongoClient(MONGO_URI)
-db = client[DATABASE_NAME]
+from mongodb_transaction_manager import MongoDBClient  # Make sure to import your MongoDBClient class
 
 # Define collections based on the models
+db = MongoDBClient.get_db()  # Use the singleton to access the database
 equipment_collection = db.equipment
 operating_rooms_collection = db.operating_rooms
 patients_collection = db.patients
@@ -25,9 +16,9 @@ surgery_equipment_usage_collection = db.surgery_equipment_usage
 surgery_room_assignments_collection = db.surgery_room_assignments
 surgery_staff_assignments_collection = db.surgery_staff_assignments
 
-
 @contextmanager
 def mongodb_transaction():
+    client = MongoDBClient.get_client()  # Use the singleton to get the MongoClient instance
     session = client.start_session()
     session.start_transaction()
     try:
@@ -38,3 +29,13 @@ def mongodb_transaction():
         raise e
     finally:
         session.end_session()
+
+    @classmethod
+    def get_db(cls):
+        if cls._db is None:
+            # Adjust these values as necessary
+            MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+            DATABASE_NAME = os.getenv("MONGO_DATABASE_NAME", "your_database_name")
+            cls._client = MongoClient(MONGO_URI)
+            cls._db = cls._client[DATABASE_NAME]
+        return cls._db

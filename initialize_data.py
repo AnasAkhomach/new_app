@@ -41,14 +41,38 @@ def initialize_staff_members():
 def initialize_surgeons():
     return [
         {
-            "staff_id": "S002",
-            "name": "Dr. Alex Johnson",
-            "specialization": "Cardiology",
-            "contact_info": "555-0102",
-            "availability": [{"start": "2023-07-01 08:00", "end": "2023-07-01 16:00"}]
+            'surgeon_id': 'S001',
+            'name': 'Dr. Emily Smith',
+            'contact_info': {
+                'email': 'emily.smith@example.com',
+                'phone': '555-0101'
+            },
+            'specialization': 'Cardiothoracic Surgery',
+            'credentials': ['Board Certified in Thoracic Surgery', 'MD from Example Medical School'],
+            'availability': [
+                {'day': 'Monday', 'start': '08:00', 'end': '16:00'},
+                {'day': 'Wednesday', 'start': '08:00', 'end': '16:00'}
+            ],
+            'surgeon_preferences': {'preferred_operating_room': 'OR1'}
         },
-        # Add more surgeon documents as needed...
+        {
+            'surgeon_id': 'S002',
+            'name': 'Dr. John Doe',
+            'contact_info': {
+                'email': 'john.doe@example.com',
+                'phone': '555-0202'
+            },
+            'specialization': 'Orthopedic Surgery',
+            'credentials': ['Board Certified in Orthopedic Surgery', 'MD from Another Example Medical School'],
+            'availability': [
+                {'day': 'Tuesday', 'start': '10:00', 'end': '18:00'},
+                {'day': 'Thursday', 'start': '10:00', 'end': '18:00'}
+            ],
+            'surgeon_preferences': {'preferred_operating_room': 'OR2'}
+        }
+        # Add more surgeons as needed
     ]
+
 
 def initialize_operating_rooms():
     return [

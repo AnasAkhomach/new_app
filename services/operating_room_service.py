@@ -32,6 +32,32 @@ class OperatingRoomService:
             print(f"Error retrieving operating room: {e}")
             return None
 
+from pymongo.errors import PyMongoError, DuplicateKeyError
+from db_config import db  # Ensure you have a way to access your db instance
+
+def create_or_update_room(room_data):
+    try:
+        # Attempt to insert or update room data, handling duplicate room_id
+        result = db.operating_rooms.update_one(
+            {"room_id": room_data["room_id"]},
+            {"$set": room_data},
+            upsert=True
+        )
+        
+        if result.upserted_id or result.modified_count > 0:
+            print(f"Room {room_data['room_id']} processed successfully.")
+            return True
+        else:
+            print(f"No changes made for Room {room_data['room_id']}.")
+            return False
+    except DuplicateKeyError:
+        print(f"Error: Room ID {room_data['room_id']} already exists. Duplicate entries are not allowed.")
+        return False
+    except PyMongoError as e:
+        print(f"Database operation failed due to error: {e}")
+        return False
+
+
 # Example usage
 if __name__ == "__main__":
     try:

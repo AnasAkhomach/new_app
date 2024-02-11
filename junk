@@ -1,0 +1,43 @@
+{
+    "staff_id": "surgeon123",
+    "name": "Dr. Jane Doe",
+    "role": "surgeon",
+    "contact_info": "jane.doe@example.com",
+    "specialization": "cardiology",
+    "availability": "Monday-Friday",
+    "surgeon_preferences": {
+        "preferred_rooms": ["Room 101", "Room 102"],
+        "preferred_times": ["morning"],
+        "other_preferences": "..."
+    }
+}
+
+
+# Example usage
+rooms = {"Room1": {}, "Room2": {}} 
+initial_solution = Solution(
+    surgeries=[
+        # Example surgery data structure
+        {"surgery_id": "surgery1", "surgeon_id": "surgeon1", "room_id": "room1", "equipment_needed": ["equipment1"], "time": "2024-01-01T09:00:00"},
+        # Add more surgeries as needed
+    ],
+    rooms = {
+        'room1': {'equipment_available': ['equipment1', 'equipment2']},
+        # other rooms
+    },
+    equipment=[
+        # Example equipment data structure
+        {"equipment_id": "equipment1", "maintenance_schedule": [{"start": "2024-01-01", "end": "2024-01-02"}]},
+        # Add more equipment as needed
+    ],
+    surgeons=[
+        # Example surgeon data structure
+        {"surgeon_id": "surgeon1", "preferences": {"preferred_surgery_type": "type1", "preferred_time_slot": "morning"}},
+        # Add more surgeons as needed
+    ],
+    room_assignments=[
+        # Example mapping of surgeries to rooms
+        {"surgery_id": "surgery1", "room_id": "room1", "time": "2024-01-01T09:00:00"},
+        # Add more assignments as needed
+    ]
+)

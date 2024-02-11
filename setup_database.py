@@ -1,27 +1,55 @@
-from db_config import db
+from mongodb_transaction_manager import MongoDBClient
 from pymongo.errors import OperationFailure
+import logging
+from manage_duplicates import find_and_handle_all_duplicates
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
-def create_indexes():
+def create_indexes(db):
+    db = MongoDBClient.get_db()  # Access the database using the MongoDBClient
+    
     try:
-        # Index for operating room availability checks
-        db.surgery_appointments.create_index([("room_id", 1)])
-        print("Index on room_id created successfully.")
+        # Example: Ensure a unique index for Operating Rooms by Room ID, created in the background
+        db.operating_rooms.create_index([("room_id", 1)], unique=True, background=True)
+        logger.info("Unique index on room_id in operating_rooms ensured.")
 
-        # Composite index for efficiently querying appointments by start and end times
-        db.surgery_appointments.create_index([("start_time", 1), ("end_time", 1)])
-        print("Index on start_time and end_time created successfully.")
+        # Composite index for Surgery Appointments by Start and End Times, created in the background
+        db.surgery_appointments.create_index([("start_time", 1), ("end_time", 1)], background=True)
+        logger.info("Composite index on start_time and end_time in surgery_appointments ensured.")
 
-        # Index for checking staff assignments and availability
-        db.surgery_appointments.create_index([("staff_assignments.staff_id", 1)])
-        print("Index on staff_assignments.staff_id created successfully.")
+        # Index for Staff Assignments in the Staff Collection, created in the background
+        db.staff.create_index([("staff_assignments.staff_id", 1)], background=True)
+        logger.info("Index on staff_assignments.staff_id in staff collection ensured.")
 
+        # Unique index for Equipment by Equipment ID, created in the background
+        db.surgery_equipment.create_index([("equipment_id", 1)], unique=True, background=True)
+        logger.info("Unique index on equipment_id in surgery_equipment ensured.")
+
+        # Unique index for Patients by Patient ID, created in the background
+        db.patients.create_index([("patient_id", 1)], unique=True, background=True)
+        logger.info("Unique index on patient_id in patients collection ensured.")
+
+        # Reviewing and adjusting indexes based on application needs
+        logger.info("Review existing indexes for optimization opportunities...")
+
+    # ... your existing index creation logic ...
+        find_and_handle_all_duplicates(db)
+        # Now that duplicates are handled, create the unique index
+        db.operating_rooms.create_index([("room_id", 1)], unique=True)
+
+        # Example: Drop an index if it's no longer needed, with logging
+        # db.collection.drop_index("index_name")
+        # logger.info("Dropped unused index: index_name")
+        
     except OperationFailure as e:
-        print(f"Error creating index: {e}")
+        logger.error(f"Error creating index: {e}")
 
 def main():
-    print("Starting database setup...")
-    create_indexes()
-    print("Database setup completed. Ensure to review and manage indexes as your application evolves.")
+    logger.info("Starting database index management...")
+    db = MongoDBClient.get_db()  # Get the database object from your MongoDB client
+    create_indexes(db)  # Pass the database object to the create_indexes function
+    logger.info("Index management completed. Review and manage indexes regularly as your application evolves.")
 
 if __name__ == "__main__":
     main()

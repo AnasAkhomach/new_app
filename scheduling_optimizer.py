@@ -10,8 +10,8 @@ from initialize_data import (initialize_patients, initialize_staff_members, init
 from scheduling_utils import (
     shift_surgery_time, find_surgeon, is_room_available,
     calculate_room_utilization, check_equipment_availability, is_surgeon_available,
-    is_equipment_available, get_least_used_room, create_new_neighbor,
-    assign_surgery_to_room, shift_surgery_time, can_swap_surgeries,
+    is_equipment_available, get_least_used_room, create_new_neighbor, evaluate_equipment_availability,
+    assign_surgery_to_room, shift_surgery_time, can_swap_surgeries, evaluate_room_utilization,
     can_swap_surgeons, find_next_available_time_slot, evaluate_surgeon_preference
 )
 
@@ -26,11 +26,14 @@ logger = logging.getLogger(__name__)
 from pymongo import MongoClient, errors
 from db_config import db
 from db_config import mongodb_transaction
+from tabu_list import TabuList
+
 
 
 
 
 class TabuSearchScheduler:
+
     def __init__(self, db):
         self.db = db
 
@@ -223,45 +226,37 @@ class TabuSearchScheduler:
         # Update class attributes or database with new assignments
         self.room_assignments = new_room_assignments
 
-    def evaluate_solution(surgery_assignments, db):
+    def evaluate_solution(solution, db):
         """
-        Evaluates a solution based on operating room utilization, surgeon preferences,
-        equipment availability, and other relevant metrics.
-
+        Evaluates the quality of a proposed surgery scheduling solution.
+        
         Args:
-            surgery_assignments (list): A list of dictionaries representing surgery assignments,
-                                        each containing surgery_id, room_id, start_time, and end_time.
-            db: The MongoDB database connection.
-
+            solution (dict): The proposed scheduling solution to evaluate.
+            db (MongoClient): The database connection for accessing relevant data.
+        
         Returns:
-            float: The overall score of the solution, where a higher score indicates a better solution.
+            int: The overall score of the solution, with higher scores indicating better solutions.
         """
-        room_utilization_score = 0.0
-        surgeon_preference_score = 0.0
-        equipment_availability_score = 0.0
-
-        # Evaluate operating room utilization
-        room_utilizations = calculate_room_utilization(surgery_assignments, db)
-        for room_id, utilization in room_utilizations.items():
-            # Adjust scoring logic based on utilization rates
-            room_utilization_score += utilization
-
-        # Evaluate surgeon preferences (this requires additional data on surgeon preferences)
-        for assignment in surgery_assignments:
-            surgeon_id = assignment['surgeon_id']
-            surgeon_preference_score += evaluate_surgeon_preference(surgeon_id, assignment, db)
-
-        # Evaluate equipment availability (assuming surgeries may be penalized for equipment issues)
-        for assignment in surgery_assignments:
-            surgery_id = assignment['surgery_id']
-            if not check_equipment_availability(surgery_id, assignment['start_time'], assignment['end_time'], db):
-                equipment_availability_score -= 10  # Penalize the solution for each equipment availability issue
-
-        # Combine scores from different criteria (adjust weights as necessary)
-        overall_score = room_utilization_score + surgeon_preference_score + equipment_availability_score
-
+        # Initialize the overall score
+        overall_score = 0
+        
+        # Evaluate surgeon preferences
+        surgeon_preference_score = evaluate_surgeon_preference(solution, db)
+        overall_score += surgeon_preference_score
+        
+        # Evaluate room utilization
+        room_utilization_score = evaluate_room_utilization(solution, db)
+        overall_score += room_utilization_score
+        
+        # Evaluate equipment availability
+        equipment_availability_score = evaluate_equipment_availability(solution, db)
+        overall_score += equipment_availability_score
+        
+        # You might add additional evaluations here (e.g., patient wait times, staff workloads)
+        
         return overall_score
-
+    
+    
 
     def is_change_possible(self, surgery, new_room_id):
         """

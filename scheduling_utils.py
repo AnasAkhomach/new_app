@@ -479,6 +479,93 @@ def evaluate_surgeon_preference(surgeon_id, assignment, db):
 
     return preference_score
 
+def evaluate_room_utilization(solution, db, operational_hours=None):
+    """
+    Calculates a score based on the utilization rate of operating rooms in the solution,
+    considering operational hours, precision in utilization calculation, and specific data structure requirements.
+
+    Args:
+        solution (dict): A proposed schedule of surgeries, structured with necessary details.
+        db (MongoClient): Database connection to access operating room information.
+        operational_hours (dict, optional): A dictionary mapping room IDs to their operational hours per day.
+
+    Returns:
+        float: A score representing the operating room utilization quality, with adjustments for specific considerations.
+    """
+    total_room_utilization_score = 0
+    total_possible_utilization = 0
+    total_actual_utilization = 0
+
+    # Retrieve operating room details to dynamically adjust operational hours if not provided
+    if not operational_hours:
+        operational_hours = {room['room_id']: 8 for room in db.operating_rooms.find()}  # Default to 8 hours if not specified
+
+    # Initialize a dictionary to track utilization
+    room_utilization = {room: 0 for room in operational_hours.keys()}
+
+    # Iterate through each assignment in the solution to calculate utilization
+    for assignment in solution['assignments']:
+        room_id = assignment['room_id']
+        if room_id not in operational_hours:
+            continue  # Skip if room_id is not recognized to ensure data integrity
+
+        start_time = datetime.strptime(assignment['start_time'], '%Y-%m-%dT%H:%M:%S')
+        end_time = datetime.strptime(assignment['end_time'], '%Y-%m-%dT%H:%M:%S')
+        surgery_duration = (end_time - start_time).total_seconds() / 3600  # Convert to hours
+        
+        room_utilization[room_id] += surgery_duration
+
+    # Calculate total and actual utilization based on operational hours
+    for room_id, hours in operational_hours.items():
+        total_possible_utilization += hours
+        total_actual_utilization += room_utilization.get(room_id, 0)
+
+    # Calculate the overall utilization rate and score
+    if total_possible_utilization > 0:
+        utilization_rate = (total_actual_utilization / total_possible_utilization) * 100
+        target_utilization_rate = 75  # Example target, adjust as needed
+        # Adjust the scoring formula based on operational priorities
+        total_room_utilization_score = max(0, 100 - abs(utilization_rate - target_utilization_rate))
+
+    return total_room_utilization_score
+
+def evaluate_equipment_availability(solution, db):
+    """
+    Evaluates the availability of required equipment for surgeries in a proposed solution.
+    
+    Args:
+        solution (dict): The proposed scheduling solution containing surgeries with their timing and required equipment.
+        db (MongoClient): The database connection to query equipment availability.
+    
+    Returns:
+        int: A score indicating the level of equipment availability for the proposed solution.
+            Higher scores indicate better availability.
+    """
+    score = 0
+    for surgery in solution['surgeries']:
+        all_equipment_available = True
+        for equipment_id in surgery['required_equipment_ids']:
+            equipment = db.equipment.find_one({'equipment_id': equipment_id})
+            if not equipment or not equipment['availability']:
+                all_equipment_available = False
+                break  # Stop checking further if any required equipment is unavailable
+            # Additionally, check for maintenance schedules if applicable
+            for maintenance_period in equipment.get('maintenance_schedule', []):
+                maintenance_start = datetime.strptime(maintenance_period['start'], '%Y-%m-%dT%H:%M:%S')
+                maintenance_end = datetime.strptime(maintenance_period['end'], '%Y-%m-%dT%H:%M:%S')
+                surgery_start = datetime.strptime(surgery['start_time'], '%Y-%m-%dT%H:%M:%S')
+                surgery_end = datetime.strptime(surgery['end_time'], '%Y-%m-%dT%H:%M:%S')
+                if surgery_start < maintenance_end and surgery_end > maintenance_start:
+                    all_equipment_available = False
+                    break  # Equipment is under maintenance during the surgery
+            if not all_equipment_available:
+                break
+        if all_equipment_available:
+            score += 1  # Increment score for each surgery with all required equipment available
+        else:
+            score -= 1  # Decrement score for each surgery lacking required equipment
+    return score
+
 
 
 # Context manager for MongoDB transactions

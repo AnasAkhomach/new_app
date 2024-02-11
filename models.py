@@ -88,18 +88,38 @@ class Staff:
         }
         return document
 
-class Surgeon(Staff):
-    def __init__(self, staff_id, name, role, contact_info, specialization, availability):
-        super().__init__(staff_id, name, role, contact_info)
+class Surgeon:
+    def __init__(self, surgeon_id, name, contact_info, specialization, credentials, availability, surgeon_preferences=None):
+        self.surgeon_id = surgeon_id
+        self.name = name
+        self.contact_info = contact_info
         self.specialization = specialization
+        self.credentials = credentials
         self.availability = availability
+        self.surgeon_preferences = surgeon_preferences or {}
+
+    @staticmethod
+    def from_document(document):
+        return Surgeon(
+            surgeon_id=document.get("surgeon_id"),
+            name=document.get("name"),
+            contact_info=document.get("contact_info"),
+            specialization=document.get("specialization"),
+            credentials=document.get("credentials"),
+            availability=document.get("availability"),
+            surgeon_preferences=document.get("surgeon_preferences", {})
+        )
 
     def to_document(self):
-        document = super().to_document()
-        document.update({
+        document = {
+            "surgeon_id": self.surgeon_id,
+            "name": self.name,
+            "contact_info": self.contact_info,
             "specialization": self.specialization,
-            "availability": self.availability
-        })
+            "credentials": self.credentials,
+            "availability": self.availability,
+            "surgeon_preferences": self.surgeon_preferences
+        }
         return document
 
 class Surgery:
