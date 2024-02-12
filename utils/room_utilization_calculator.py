@@ -9,7 +9,7 @@ class RoomUtilizationCalculator:
     def __init__(self):
         self.db = MongoDBClient.get_db()
 
-    def calculate_room_utilization_efficiency(self, start_date, end_date):
+    def calculate(self, start_date, end_date):
         # Fetch all room assignments within the given date range
         room_assignments = self.db.surgery_room_assignments.find({
             "start_time": {"$gte": start_date},

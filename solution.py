@@ -6,6 +6,8 @@ from utils.operational_cost_calculator import OperationalCostCalculator
 from utils.room_utilization_calculator import RoomUtilizationCalculator
 from utils.workload_balance_calculator import WorkloadBalanceCalculator
 from utils.preference_satisfaction_calculator import PreferenceSatisfactionCalculator
+from utils.resource_utilization_efficiency_calculator import ResourceUtilizationEfficiencyCalculator
+from utils.equipment_utilization_efficiency_calculator import EquipmentUtilizationEfficiencyCalculator
 
 
 from scheduling_utils import(is_surgeon_available,
@@ -14,33 +16,78 @@ from scheduling_utils import(is_surgeon_available,
                             is_staff_available)
 
 
-class Solution:
-    def __init__(self, surgeries, rooms, equipment, surgeons, room_assignments):
-        if not isinstance(rooms, dict) or not isinstance(equipment, dict):
-            raise TypeError("rooms and equipment must be dictionaries")
-        self.surgeries = surgeries
-        self.rooms = rooms
-        self.equipment = equipment
-        self.surgeons = surgeons
-        self.room_assignments = room_assignments
-  
-        # Initialize metrics with default values
-        self.score = 0
-        self.workload_balance = self.calculate_workload_balance()
-        self.preference_satisfaction = self.calculate_preference_satisfaction()
-        self.resource_utilization_efficiency = self.calculate_resource_utilization_efficiency()
-        self.equipment_utilization_efficiency = self.calculate_equipment_utilization_efficiency()
-        self.surgeon_schedule_compactness = self.calculate_surgeon_schedule_compactness()
-        self.operational_cost_minimization = self.calculate_operational_cost_minimization()
-        self.room_utilization_efficiency = self.calculate_room_utilization_efficiency()
-        self.preference_satisfaction_calculator = PreferenceSatisfactionCalculator()
-        self.preference_satisfaction = self.calculate_preference_satisfaction(surgeries)
+from mongodb_transaction_manager import MongoDBClient
+# Ensure you have imported all calculator classes above
 
-    # Method to calculate or update the score of the solution based on the current state
+class Solution:
+    def __init__(self):
+        # Establish a database connection
+        self.db = MongoDBClient.get_db()
+        
+        # Fetch initial data needed for calculations
+        self.fetch_initial_data()
+        
+        # Initialize calculator instances for different metrics
+        self.initialize_calculators()
+
+        self.start_date = None
+        self.end_date = None
+
+    def set_analysis_period(self, start_date, end_date):
+        """Sets the analysis period for calculations."""
+        self.start_date = start_date
+        self.end_date = end_date                
+        
+    def fetch_initial_data(self):
+        # Fetch surgeries data
+        self.surgeries = list(self.db.surgeries.find({}))
+        
+        # Fetch rooms data and convert it into a dictionary for easy access
+        self.rooms = {room['room_id']: room for room in self.db.rooms.find({})}
+        
+        # Fetch equipment data and convert it into a dictionary for easy access
+        self.equipment = {equipment['equipment_id']: equipment for equipment in self.db.equipment.find({})}
+        
+        # Fetch surgeons data
+        self.surgeons = list(self.db.surgeons.find({}))
+        
+        # Fetch room assignments data
+        self.room_assignments = list(self.db.room_assignments.find({}))
+  
+    def initialize_calculators(self):
+        # Initialize the Workload Balance Calculator
+        self.workload_balance_calculator = WorkloadBalanceCalculator()
+        
+        # Initialize the Preference Satisfaction Calculator
+        self.preference_satisfaction_calculator = PreferenceSatisfactionCalculator()
+        
+        # Initialize the Equipment Utilization Efficiency Calculator
+        self.equipment_utilization_calculator = EquipmentUtilizationCalculator()
+        
+        # Initialize the Operational Cost Calculator
+        self.operational_cost_calculator = OperationalCostCalculator()
+        
+        # Initialize the Room Utilization Efficiency Calculator
+        self.room_utilization_calculator = RoomUtilizationCalculator()
+
+        # Initialize each calculator with necessary parameters
+        self.resource_utilization_efficiency_calculator = ResourceUtilizationEfficiencyCalculator()
+
+        start_date = datetime(2023, 1, 1)
+        end_date = datetime(2023, 12, 31)
+        efficiency = self.resource_utilization_efficiency_calculator.calculate(start_date, end_date)
+
+        # Display the calculated efficiency
+        print("Resource Utilization Efficiency:")
+        for resource_id, efficiency_percent in efficiency.items():
+            print(f"{resource_id}: {efficiency_percent}%")
+
+        # Make sure this line is included for equipment utilization efficiency calculator
+        self.equipment_utilization_efficiency_calculator = EquipmentUtilizationEfficiencyCalculator()
+
     def calculate_score(self):
         # Reset score before recalculating
         self.score = 0
-
         # Calculate score components
         self.score += self.calculate_workload_balance()
         self.score += self.calculate_preference_satisfaction()
@@ -49,9 +96,94 @@ class Solution:
         self.score += self.calculate_equipment_utilization_efficiency()
         self.score += self.calculate_operational_cost_minimization()
         self.score += self.calculate_room_utilization_efficiency()
-
-
         return self.score
+
+    def update_metrics(self):
+        self.workload_balance = self.workload_balance_calculator.calculate_workload_balance()
+        self.preference_satisfaction = self.preference_satisfaction_calculator.calculate(self.surgeries)
+        self.resource_utilization_efficiency = self.resource_utilization_efficiency_calculator.calculate(self.start_date, self.end_date)
+        self.equipment_utilization_efficiency = self.equipment_utilization_efficiency_calculator.calculate(self.start_date, self.end_date)
+        self.room_utilization_efficiency = self.room_utilization_calculator.calculate(self.start_date, self.end_date)
+        # Update the score based on the new metrics
+        self.calculate_score()
+
+    def calculate_workload_balance(self):
+        """
+        Calculates and updates the workload balance metric using the WorkloadBalanceCalculator.
+        """
+        try:
+            self.workload_balance = self.workload_balance_calculator.calculate()
+        except Exception as e:
+            print(f"Error calculating workload balance: {e}")
+            self.workload_balance = None
+
+    def calculate_preference_satisfaction(self):
+        """
+        Calculates and updates the preference satisfaction metric using the PreferenceSatisfactionCalculator.
+        """
+        try:
+            self.preference_satisfaction = self.preference_satisfaction_calculator.calculate(self.surgeries)
+        except Exception as e:
+            print(f"Error calculating preference satisfaction: {e}")
+            self.preference_satisfaction = None
+
+    def calculate_equipment_utilization_efficiency(self):
+        """
+        Calculates and updates the equipment utilization efficiency using the EquipmentUtilizationCalculator.
+        """
+        try:
+            self.equipment_utilization_efficiency = self.equipment_utilization_calculator.calculate(self.start_date, self.end_date)
+        except Exception as e:
+            print(f"Error calculating equipment utilization efficiency: {e}")
+            self.equipment_utilization_efficiency = None
+
+    def calculate_operational_cost_minimization(self):
+        """
+        Calculates and updates the operational cost using the OperationalCostCalculator.
+        """
+        try:
+            self.operational_cost_minimization = self.operational_cost_calculator.calculate()
+        except Exception as e:
+            print(f"Error calculating operational cost: {e}")
+            self.operational_cost_minimization = None
+
+    def calculate_room_utilization_efficiency(self):
+        """
+        Calculates and updates the room utilization efficiency using the RoomUtilizationCalculator.
+        """
+        try:
+            self.room_utilization_efficiency = self.room_utilization_calculator.calculate(self.start_date, self.end_date)
+        except Exception as e:
+            print(f"Error calculating room utilization efficiency: {e}")
+            self.room_utilization_efficiency = None
+
+    def calculate_all_metrics(self):
+        """Calculates and updates all metrics for the solution."""
+        # Assuming self.surgeries is already populated
+        self.workload_balance = self.workload_balance_calculator.calculate_workload_balance(self.surgeries)
+        self.preference_satisfaction = self.preference_satisfaction_calculator.calculate(self.surgeries)
+        self.resource_utilization_efficiency = self.resource_utilization_efficiency_calculator.calculate(self.start_date, self.end_date)
+        self.equipment_utilization_efficiency = self.equipment_utilization_efficiency_calculator.calculate(self.start_date, self.end_date)
+        self.operational_cost_minimization = self.operational_cost_calculator.calculate(self.surgeries)
+        self.room_utilization_efficiency = self.room_utilization_calculator.calculate(self.start_date, self.end_date)
+        self.resource_utilization_efficiency_calculator = ResourceUtilizationEfficiencyCalculator()
+               
+        # Update more metrics as needed
+
+        # You might want to return the calculated metrics or print them
+        # For demonstration purposes, we'll just print them here
+        print(f"Workload Balance: {self.workload_balance}")
+        print(f"Preference Satisfaction: {self.preference_satisfaction}")
+        print(f"Resource Utilization Efficiency: {self.resource_utilization_efficiency}")
+        print(f"Equipment Utilization Efficiency: {self.equipment_utilization_efficiency}")
+        print(f"Operational Cost Minimization: {self.operational_cost_minimization}")
+        print(f"Room Utilization Efficiency: {self.room_utilization_efficiency}")
+        # Print more metrics as needed
+
+
+
+
+
 
 
     def get_surgeon_preferences(self, surgeon_id, db):
@@ -263,21 +395,13 @@ class Solution:
         # You might want to store this metric in the instance for later use
         return workload_balance_metric
 
-
-    def update_metrics(self):
-        """Updates all metrics for the solution based on the current state."""
-        self.calculate_workload_balance()
-        self.calculate_preference_satisfaction()
-        self.calculate_resource_utilization_efficiency()
-        self.calculate_equipment_utilization_efficiency()
-        self.calculate_surgeon_schedule_compactness()
-        self.calculate_operational_cost_minimization()
-        self.calculate_room_utilization_efficiency()
-        self.calculate_score() 
+    # Existing methods...
+    def calculate_resource_utilization_efficiency(self):
+        if not self.start_date or not self.end_date:
+            raise ValueError("Start date and end date must be set before performing this calculation.")
 
     def calculate_preference_satisfaction(self, surgeries):
-        # Directly use the calculator to calculate preference satisfaction
-        return self.preference_satisfaction_calculator.calculate(surgeries)
+        return self.preference_satisfaction_calculator.calculate_preference_satisfaction(surgeries)
 
 # Example weights for each metric
 weight_workload_balance = 2.0
@@ -301,49 +425,23 @@ def calculate_score(self):
     )
     return self.score
 
-if __name__ == "__main__":
-    # Other parts of your solution script would go here
+from datetime import datetime
+from solution import Solution
 
-    # Example of using EquipmentUtilizationCalculator within your solution script
-    calculator = EquipmentUtilizationCalculator()
-    start_date = datetime(2023, 1, 1)
-    end_date = datetime(2023, 1, 31)
-    efficiency = calculator.calculate_equipment_utilization_efficiency(start_date, end_date)
-    print("Equipment Utilization Efficiency:")
-    for equipment_id, util in efficiency.items():
-        print(f"Equipment ID: {equipment_id}, Utilization Efficiency: {util:.2f}%")
+# Initialize the Solution instance
+solution_instance = Solution()
 
-    # Establish a connection to the database
+# Optionally, if your design includes setting an analysis period:
+solution_instance.set_analysis_period(
+    start_date=datetime(2023, 1, 1),
+    end_date=datetime(2023, 12, 31)
+)
 
-    db_client = MongoDBClient()
-    db = db_client.get_db()
-   
-    # Fetch data from collections
-    patients = list(db.patients.find({}))
-    staff_members = list(db.staff_members.find({}))
-    surgeons = list(db.surgeons.find({}))
-    operating_rooms = {room['room_id']: room for room in db.operating_rooms.find({})}
-    surgeries = list(db.surgeries.find({}))
-    surgery_equipments = {eq['equipment_id']: eq for eq in db.surgery_equipments.find({})}
-    surgery_equipment_usages = list(db.surgery_equipment_usages.find({}))
-    surgery_room_assignments = list(db.surgery_room_assignments.find({}))
-    surgery_staff_assignments = list(db.surgery_staff_assignments.find({}))
-    surgery_appointments = list(db.surgery_appointments.find({}))
+# Calculate all metrics
+solution_instance.calculate_all_metrics()
 
-    # Assuming your Solution class is prepared to handle the data structure directly fetched from MongoDB
-    solution_instance = Solution(
-        surgeries=surgeries,
-        rooms=operating_rooms,
-        equipment=surgery_equipments,
-        surgeons=surgeons,
-        room_assignments=surgery_room_assignments
-    )
-
-    cost_calculator = OperationalCostCalculator(db)
-    average_surgery_duration = cost_calculator.calculate_operational_cost_minimization()
-
-    # Output the average surgery duration
-    print(f"Average Surgery Duration: {average_surgery_duration:.2f} hours")
-
-    # Continue with other methods or calculations as needed
-
+# Access and print some calculated metrics for verification
+print(f"Equipment Utilization Efficiency: {solution_instance.equipment_utilization_efficiency}")
+print(f"Operational Cost Minimization: {solution_instance.operational_cost_minimization}")
+print(f"Room Utilization Efficiency: {solution_instance.room_utilization_efficiency}")
+print(f"Workload Balance: {solution_instance.workload_balance}")
