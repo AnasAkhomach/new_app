@@ -1,92 +1,113 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from mongodb_transaction_manager import MongoDBClient
 import random
 
+from pymongo import MongoClient
+
 class TabuList:
-    def __init__(self, max_tenure, min_tenure):
-        self.entries = {}  # Using a dictionary to store attribute and tenure
+    def __init__(self, max_tenure=None, min_tenure=None):
+        self.db = MongoDBClient.get_db()
+        self.tabu_collection = self.db.tabu_entries
         self.max_tenure = max_tenure
         self.min_tenure = min_tenure
-
-    def add(self, attribute, tenure=None):
+        # Initialize other necessary cl
+    # Example of adding a new tabu entry with MongoDB
+        
+    def add_complex(self, surgeon_id, room_id, equipment_id, time_slot, tenure=None):
         if tenure is None:
             tenure = self.max_tenure
-        self.entries[attribute] = tenure
+        # Define a complex attribute as a combination of provided parameters
+        complex_attribute = {
+            'surgeon_id': surgeon_id,
+            'room_id': room_id,
+            'equipment_id': equipment_id,
+            'time_slot': time_slot
+        }
+        self.tabu_collection.update_one(complex_attribute, {'$set': {'tenure': tenure}}, upsert=True)
 
-    def is_tabu(self, attribute):
-        return attribute in self.entries
+    # Other methods adapted to use MongoDB...
+
+    def is_complex_tabu(self, surgeon_id, room_id, equipment_id, time_slot):
+        complex_attribute = {
+            'surgeon_id': surgeon_id,
+            'room_id': room_id,
+            'equipment_id': equipment_id,
+            'time_slot': time_slot
+        }
+        return self.tabu_collection.find_one(complex_attribute) is not None
 
     def decrement_tenure(self):
-        to_remove = [attribute for attribute, tenure in self.entries.items() if tenure - 1 <= 0]
-        for attribute in to_remove:
-            del self.entries[attribute]
-        for attribute in self.entries:
-            self.entries[attribute] -= 1
+        self.tabu_collection.update_many({}, {'$inc': {'tenure': -1}})
+        self.tabu_collection.delete_many({'tenure': {'$lte': 0}})
+
+
+    def update_tenure_based_on_progress(self, progress_calculator):
+        progress = progress_calculator()
+        tabu_entries = self.tabu_collection.find()
+        for entry in tabu_entries:
+            new_tenure = max(int(entry['tenure'] * (1 - progress)), 1)  # Prevent tenure from becoming 0 prematurely
+            self.tabu_collection.update_one({'_id': entry['_id']}, {'$set': {'tenure': new_tenure}})
+
+
 
     def clear(self):
-        self.entries.clear()
-
-
-    # Specific methods to handle different types of tabu entries
-    def add_surgery_room_assignment(self, surgery_id, room_id, tenure):
-        self.add(('surgery_room', surgery_id, room_id), tenure)
-
-    def add_surgeon_assignment(self, surgery_id, surgeon_id, tenure):
-        self.add(('surgeon', surgery_id, surgeon_id), tenure)
-
-    def add_equipment_assignment(self, surgery_id, equipment_id, tenure):
-        self.add(('equipment', surgery_id, equipment_id), tenure)
-
-    def is_surgery_room_tabu(self, surgery_id, room_id):
-        """
-        Checks if a surgery room assignment for a surgery is currently tabu.
-        """
-        return self.is_tabu(('surgery_room', surgery_id, room_id))
-
-    def is_surgeon_tabu(self, surgery_id, surgeon_id):
-        """
-        Checks if a surgeon assignment for a surgery is currently tabu.
-        """
-        return self.is_tabu(('surgeon', surgery_id, surgeon_id))
-
-    def is_time_slot_tabu(self, surgery_id, start_time):
-        """
-        Checks if a time slot assignment for a surgery is currently tabu.
-        """
-        return self.is_tabu(('time_slot', surgery_id, start_time))
-
-    def is_equipment_tabu(self, surgery_id, equipment_id):
-        """
-        Checks if an equipment assignment for a surgery is currently tabu.
-        """
-        return self.is_tabu(('equipment', surgery_id, equipment_id))
+        self.tabu_collection.delete_many({})
     
-    def update_tenure_based_on_progress(self, progress_calculator):
-        for attribute, tenure in self.entries.items():
-            progress = progress_calculator()
-            self.entries[attribute] = int(tenure * (1 - progress))
 
-    def apply_randomized_tenure(self):
-        for attribute in self.entries:
-            self.entries[attribute] = random.randint(self.min_tenure, self.max_tenure)
+    def adjust_frequency_based_tenure(self, frequency_dict, min_tenure=None, max_tenure=None):
+        # Use class attributes if specific values are not provided
+        min_tenure = min_tenure if min_tenure is not None else self.min_tenure
+        max_tenure = max_tenure if max_tenure is not None else self.max_tenure
 
-    def adjust_frequency_based_tenure(self, attribute, frequency_dict):
-        frequency = frequency_dict.get(attribute, 0)
-        if frequency > 0:
-            self.entries[attribute] = min(self.entries.get(attribute, self.max_tenure) + frequency, self.max_tenure)
-        else:
-            self.entries[attribute] = max(self.entries.get(attribute, self.min_tenure) - 1, self.min_tenure)
+        for attribute, frequency in frequency_dict.items():
+            tabu_entry = self.tabu_collection.find_one({'attribute': attribute})
+            frequency_dict = {}
+
+            if tabu_entry:
+                current_tenure = tabu_entry.get('tenure', max_tenure)
+                if frequency > 0:
+                    new_tenure = min(current_tenure + frequency, max_tenure)
+                else:
+                    new_tenure = max(current_tenure - 1, min_tenure)
+                self.tabu_collection.update_one({'_id': tabu_entry['_id']}, {'$set': {'tenure': new_tenure}})
+            else:
+                # Handle the case where there is no entry for this attribute, e.g., create a new one or ignore
+                print(f"No tabu entry found for attribute: {attribute}")
+
+    def adjust_tenures_based_on_global_condition(self):
+        # Example global condition adjustment logic remains abstract; specifics depend on the condition being evaluated
+        tabu_entries = self.tabu_collection.find()
+        for entry in tabu_entries:
+            # Adjust tenure based on the global condition, e.g., decrement by one until reaching min_tenure
+            new_tenure = max(entry.get('tenure', self.max_tenure) - 1, self.min_tenure)
+            self.tabu_collection.update_one({'_id': entry['_id']}, {'$set': {'tenure': new_tenure}})
+
+
+    def apply_randomized_tenure(self, min_tenure=None, max_tenure=None):
+        min_tenure = min_tenure if min_tenure is not None else self.min_tenure
+        max_tenure = max_tenure if max_tenure is not None else self.max_tenure
+        tabu_entries = self.tabu_collection.find()
+        for entry in tabu_entries:
+            new_tenure = random.randint(min_tenure, max_tenure)
+            self.tabu_collection.update_one({'_id': entry['_id']}, {'$set': {'tenure': new_tenure}})
+
+
 
 # Example usage:
 tabu_list = TabuList(max_tenure=10, min_tenure=5)
-tabu_list.add('attribute1')
-tabu_list.add('attribute2', tenure=7)
+
 # Assuming we have a function that returns the search progress
 progress_calculator = lambda: 0.5  # Example function that returns 50% progress
 tabu_list.update_tenure_based_on_progress(progress_calculator)
 tabu_list.apply_randomized_tenure()
 
-# Assuming we have a frequency dictionary for attributes
-frequency_dict = {'attribute1': 3, 'attribute2': 1}
-tabu_list.adjust_frequency_based_tenure('attribute1', frequency_dict)
+#tabu_list.adjust_frequency_based_tenure()
+tabu_list.adjust_tenures_based_on_global_condition()
 
 # Output the tabu list entries and tenures
-print(tabu_list.entries)
+#print(tabu_list.entries)
+tabu_entries = list(tabu_list.tabu_collection.find())
+for entry in tabu_entries:
+    print(entry)

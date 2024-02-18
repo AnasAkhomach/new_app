@@ -6,6 +6,12 @@ pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-
 pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --upgrade pip
 pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org pymongo
 pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org python-dotenv
+pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org faker
+pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org pytest
+pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org mongomock
+pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org flask
+
+
 
 mongodb+srv://nouhakarim:<password>@cluster0.obpf5yj.mongodb.net/
 
@@ -26,7 +32,19 @@ generate_neighbors
         list: A list of neighboring schedules.
         """
 
+def initialize_surgeries():
+    patient_ids = fetch_ids(collection_name="patients", id_field="patient_id")
+    surgeon_ids = fetch_ids(collection_name="surgeons", id_field="surgeon_id")
+    room_ids = fetch_ids(collection_name="operating_rooms", id_field="room_id")
+    # Continue with the surgeries initialization using these fetched IDs
 
+
+def fetch_ids(collection_name, id_field):
+    # Assume db is a global MongoDB client instance accessible here
+    collection = db[collection_name]
+    documents = collection.find({}, {id_field: 1})
+    ids = [doc[id_field] for doc in documents]
+    return ids
 
 
 

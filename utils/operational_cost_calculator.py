@@ -1,3 +1,4 @@
+from datetime import datetime
 import sys
 import os
 
@@ -10,21 +11,26 @@ class OperationalCostCalculator:
         self.db = MongoDBClient.get_db()
 
     def calculate(self, surgeries):
-        if not surgeries:
-            print("No surgeries provided for operational cost calculation.")
-            return None
-
-        # Calculate the average duration of the provided surgeries
         total_duration = 0
+        surgery_count = 0
+
         for surgery in surgeries:
-            if 'start_time' in surgery and 'end_time' in surgery:
-                duration = (surgery['end_time'] - surgery['start_time']).total_seconds() / 3600  # Convert seconds to hours
-                total_duration += duration
+            # Convert 'start_time' and 'end_time' from string to datetime objects
+            start_time = datetime.strptime(surgery['start_time'], "%Y-%m-%dT%H:%M:%S")
+            end_time = datetime.strptime(surgery['end_time'], "%Y-%m-%dT%H:%M:%S")
 
-        average_duration = total_duration / len(surgeries) if surgeries else 0
+            # Calculate duration in hours
+            duration = (end_time - start_time).total_seconds() / 3600
+            total_duration += duration
+            surgery_count += 1
 
-        # Assuming the operational cost is directly related to the surgery duration
-        # Here, you might convert duration to cost if you have a cost model
+        # Calculate and return the average surgery duration
+        if surgery_count > 0:
+            average_duration = total_duration / surgery_count
+        else:
+            # Handle case with no surgeries to avoid division by zero
+            average_duration = 0
+
         return average_duration
 
 # Example usage

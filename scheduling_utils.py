@@ -3,8 +3,31 @@ from pymongo.errors import PyMongoError
 from models import Surgery, OperatingRoom, SurgeryRoomAssignment, Surgeon, SurgeryEquipment
 from db_config import db
 from db_config import mongodb_transaction
+from mongodb_transaction_manager import MongoDBClient
+
 from bson.objectid import ObjectId
 
+# In scheduling_utils.py or within your scheduling class
+
+def get_resource_identifiers(surgery_id):
+    db = MongoDBClient.get_db()  # Get database connection
+    surgery_details = db.surgeries.find_one({"_id": surgery_id})
+    if surgery_details:
+        return {
+            'surgeon_id': surgery_details.get('surgeon_id'),
+            'room_id': surgery_details.get('room_id'),
+            'equipment_id': surgery_details.get('equipment_id'),
+        }
+    else:
+        return None
+
+def pre_fetch_resource_identifiers(surgery_ids):
+    identifiers_map = {}
+    for surgery_id in surgery_ids:
+        identifiers = get_resource_identifiers(surgery_id)
+        if identifiers:
+            identifiers_map[surgery_id] = identifiers
+    return identifiers_map
 
 
 def shift_surgery_time(current_time_str, delta_minutes):
@@ -565,6 +588,7 @@ def evaluate_equipment_availability(solution, db):
         else:
             score -= 1  # Decrement score for each surgery lacking required equipment
     return score
+
 
 
 

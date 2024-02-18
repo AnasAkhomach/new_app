@@ -34,8 +34,13 @@ from tabu_list import TabuList
 
 class TabuSearchScheduler:
 
-    def __init__(self, db):
+    def __init__(self, db, max_iterations, no_improve_limit):
         self.db = db
+        self.max_iterations = max_iterations
+        self.no_improve_limit = no_improve_limit
+        # Initialize other necessary components here, such as the TabuList
+        self.tabu_list = TabuList(max_tenure=10, min_tenure=5)
+        # Assume other initial setup has been done, like fetching data
 
     def find_next_available_time(self, room_id):
         with mongodb_transaction() as session:
@@ -190,12 +195,6 @@ class TabuSearchScheduler:
                             return False
 
             return True
-
-    def run(self):
-        # The main method to run the Tabu Search optimization ...
-        # This should include the initialization of the first solution, the main optimization loop,
-        # the logic to manage the tabu list, and the logic to update the best solution
-        pass
     
     def find_initial_solution(self):
         self.surgeries.sort(key=lambda x: x.urgency_level, reverse=True)  # Sort surgeries by urgency
@@ -256,8 +255,6 @@ class TabuSearchScheduler:
         
         return overall_score
     
-    
-
     def is_change_possible(self, surgery, new_room_id):
         """
         Check if changing the room for the surgery to `new_room_id` is possible,
@@ -482,32 +479,68 @@ class TabuSearchScheduler:
 
 
 
-    # Additional methods as needed ...
+    def run(self):
+        # Initialize the first solution
+        current_solution = self.initialize_solution()
+        best_solution = current_solution
+        best_score = self.evaluate_solution(current_solution)
+        
+        iterations_since_improvement = 0
 
-# Entry point to run the optimization if this script is run directly
-if __name__ == "__main__":
-    # Initialize data using the functions from initialize_data.py
-    surgeries = initialize_surgeries()
-    operating_rooms = initialize_operating_rooms()
-    surgeons = initialize_surgeons()
-    patients = initialize_patients()
-    staff_members = initialize_staff_members()
-    surgery_equipments = initialize_surgery_equipments()
-    surgery_equipment_usages = initialize_surgery_equipment_usages()
-    surgery_room_assignments = initialize_surgery_room_assignments()
-    surgery_staff_assignments = initialize_surgery_staff_assignments()
+        for iteration in range(self.max_iterations):
+            if iterations_since_improvement >= self.no_improve_limit:
+                print("No improvement in the last {} iterations. Stopping...".format(self.no_improve_limit))
+                break
+            
+            neighbor_solutions = self.generate_neighbor_solutions(current_solution)
+            best_neighbor_score = float('-inf')
+            best_neighbor = None
+            
+            for neighbor in neighbor_solutions:
+                if self.is_solution_tabu(neighbor) and not self.is_solution_better(neighbor, best_solution):
+                    continue  # Skip tabu solutions unless they're better than the best solution found so far
+                
+                score = self.evaluate_solution(neighbor)
+                if score > best_neighbor_score:
+                    best_neighbor = neighbor
+                    best_neighbor_score = score
+            
+            if best_neighbor_score > best_score:
+                best_solution = best_neighbor
+                best_score = best_neighbor_score
+                iterations_since_improvement = 0
+                print("Iteration {}: New best score found: {}".format(iteration, best_score))
+            else:
+                iterations_since_improvement += 1
+            
+            # Update the tabu list for the next iteration
+            self.update_tabu_list(current_solution, best_neighbor)
+            
+            current_solution = best_neighbor  # Move to the next solution
+            
+        return best_solution  # Return the best solution found
 
-    # Equipment inventory for check_equipment_availability (example structure)
-    equipment_inventory = {eq.equipment_id: eq.availability for eq in surgery_equipments}
+    def initialize_solution(self):
+        # Implementation details here
+        pass
 
-    # Instantiate the scheduler with the initialized data
-    scheduler = TabuSearchScheduler(surgeries, surgery_room_assignments, surgeons)
+    def generate_neighbor_solutions(self, current_solution):
+        # Implementation details here
+        pass
 
-    # Example: Calculate room utilization and equipment availability scores (for demonstration)
-    room_utilization_score = scheduler.calculate_room_utilization(surgery_room_assignments, operating_rooms)
-    equipment_availability_score = scheduler.check_equipment_availability(surgeries, equipment_inventory)
+    def evaluate_solution(self, solution):
+        # Implementation details here
+        pass
 
-    print(f"Room Utilization Score: {room_utilization_score}")
-    print(f"Equipment Availability Score: {equipment_availability_score}")
+    def is_solution_tabu(self, solution):
+        # Check if the solution or parts of it are in the tabu list
+        pass
 
-    scheduler.run()
+    def is_solution_better(self, solution, best_solution):
+        # Compare two solutions to determine if one is better
+        pass
+
+    def update_tabu_list(self, current_solution, new_solution):
+        # Update the tabu list based on the move made
+        pass
+

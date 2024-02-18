@@ -32,6 +32,14 @@ def create_indexes(db):
 
         # Reviewing and adjusting indexes based on application needs
         logger.info("Review existing indexes for optimization opportunities...")
+        
+        db.tabu_entries.create_index([
+            ("surgeon_id", 1),
+            ("room_id", 1),
+            ("equipment_id", 1),
+            ("time_slot", 1)
+        ], background=True)
+        logger.info("Composite index on surgeon_id, room_id, equipment_id, and time_slot in tabu_entries ensured.")
 
     # ... your existing index creation logic ...
         find_and_handle_all_duplicates(db)

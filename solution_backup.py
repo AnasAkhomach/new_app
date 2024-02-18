@@ -1,8 +1,4 @@
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from mongodb_transaction_manager import MongoDBClient
-
+from db_config import db
 from datetime import datetime
 from mongodb_transaction_manager import MongoDBClient  # Ensure this import matches your consolidated script name
 from utils.equipment_utilization_calculator import EquipmentUtilizationCalculator

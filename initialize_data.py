@@ -1,166 +1,202 @@
+from faker import Faker
+import random
+import sys
+import os
+
+# Add the parent directory to sys.path to find MongoDBClient
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from mongodb_transaction_manager import MongoDBClient
+
+fake = Faker()
+db = MongoDBClient.get_db()
+
+
+
 def initialize_patients():
-    return [
-        {
-            "patient_id": "P001",
-            "name": "John Doe",
-            "dob": "1990-01-01",
+    patients = []
+    for _ in range(100):  # Generate 100 patients
+        patient = {
+            "patient_id": fake.unique.uuid4(),
+            "name": fake.name(),
+            "dob": fake.date_of_birth(minimum_age=18, maximum_age=85).strftime('%Y-%m-%d'),
             "contact_info": {
-                "phone": "555-0100",
-                "email": "john.doe@example.com"
+                "phone": fake.phone_number(),
+                "email": fake.email()
             },
             "medical_history": [
-                {"condition": "Condition A", "date_diagnosed": "2018-05-01"},
-                {"condition": "Condition B", "date_diagnosed": "2019-11-15"},
-                # Add more medical history records as needed
+                {
+                    "condition": fake.word(),
+                    "date_diagnosed": fake.date_between(start_date="-10y", end_date="today").strftime('%Y-%m-%d')
+                } for _ in range(fake.random_int(min=1, max=5))  # Generate 1-5 medical history records
             ],
-            "privacy_consent": True
-        },
-        # Add more patient documents as needed...
-    ]
+            "privacy_consent": fake.boolean()
+        }
+        patients.append(patient)
+    return patients
 
-def initialize_staff_members():
-    return [
-        {
-            "staff_id": "S001",
-            "name": "Jane Smith",
-            "role": "Nurse",
-            "specialization": None,  # This can be null/None for non-surgeons
-            "contact_info": {
-                "phone": "555-0101",
-                "email": "jane.smith@example.com"
-            },
-            "availability_schedule": [
-                {"day": "Monday", "start": "08:00", "end": "17:00"},
-                {"day": "Tuesday", "start": "08:00", "end": "17:00"},
-                # Add more availability slots as needed
-            ]
-        },
-        # Add more staff member documents as needed...
-    ]
 
 def initialize_surgeons():
-    return [
-        {
-            'surgeon_id': 'S001',
-            'name': 'Dr. Emily Smith',
-            'contact_info': {
-                'email': 'emily.smith@example.com',
-                'phone': '555-0101'
+    surgeons = []
+    specializations = ["Cardiothoracic Surgery", "Orthopedic Surgery", "Neurology"]
+    for _ in range(10):
+        surgeons.append({
+            "surgeon_id": fake.unique.uuid4(),
+            "name": fake.name(),
+            "contact_info": {
+                "email": fake.email(),
+                "phone": fake.phone_number(),
             },
-            'specialization': 'Cardiothoracic Surgery',
-            'credentials': ['Board Certified in Thoracic Surgery', 'MD from Example Medical School'],
-            'availability': [
-                {'day': 'Monday', 'start': '08:00', 'end': '16:00'},
-                {'day': 'Wednesday', 'start': '08:00', 'end': '16:00'}
-            ],
-            'surgeon_preferences': {'preferred_operating_room': 'OR1'}
-        },
-        {
-            'surgeon_id': 'S002',
-            'name': 'Dr. John Doe',
-            'contact_info': {
-                'email': 'john.doe@example.com',
-                'phone': '555-0202'
-            },
-            'specialization': 'Orthopedic Surgery',
-            'credentials': ['Board Certified in Orthopedic Surgery', 'MD from Another Example Medical School'],
-            'availability': [
-                {'day': 'Tuesday', 'start': '10:00', 'end': '18:00'},
-                {'day': 'Thursday', 'start': '10:00', 'end': '18:00'}
-            ],
-            'surgeon_preferences': {'preferred_operating_room': 'OR2'}
-        }
-        # Add more surgeons as needed
-    ]
+            "specialization": random.choice(specializations),
+            "credentials": [fake.sentence() for _ in range(2)],  # Generate 2 credentials
+            "availability": [{
+                "day": fake.day_of_week(),
+                "start": fake.time(),
+                "end": fake.time(),
+            } for _ in range(random.randint(1, 3))],  # Generate 1-3 availability slots
+            "surgeon_preferences": {
+                "preferred_operating_room": f"OR{random.randint(1, 10)}"
+            }
+        })
+    return surgeons
 
 
 def initialize_operating_rooms():
-    return [
-        {
-            "room_id": "OR001",
-            "location": "Main Building - Room 101",
-            "equipment_list": []
-        },
-        # Add more operating room documents as needed...
-    ]
+    operating_rooms = []
+    for i in range(1, 11):  # Generate 10 operating rooms
+        operating_rooms.append({
+            "room_id": f"OR{i}",
+            "location": f"{fake.city()} - Room {i}",
+            "equipment_list": [fake.word() for _ in range(random.randint(1, 5))],  # Generate 1-5 equipment items
+        })
+    return operating_rooms
+
+
+
+def initialize_staff_members():
+    staff_members = []
+    roles = ["Nurse", "Anesthesiologist", "Technician", "Administrative Staff"]
+    for _ in range(10):
+        staff_members.append({
+            "staff_id": fake.unique.uuid4(),
+            "name": fake.name(),
+            "role": random.choice(roles),
+            "contact_info": {
+                "phone": fake.phone_number(),
+                "email": fake.email()
+            },
+            "availability_schedule": [{
+                "day": fake.day_of_week(),
+                "start": fake.time(),
+                "end": fake.time(),
+            } for _ in range(random.randint(1, 5))],  # Generate 1-5 availability slots
+        })
+    return staff_members
+
 
 def initialize_surgeries():
-    return [
-        {
-            "surgery_id": "SUR001",
-            "patient_id": "P001",
-            "scheduled_date": "2023-07-01",  # Use an actual date
-            "estimated_start_time": "08:00",  # New
-            "estimated_end_time": "10:00",  # New
-            "surgery_type": "Appendectomy",
-            "urgency_level": "High",
-            "duration": 120,
-            "status": "Scheduled",
-            "priority": "Normal"
-        },
-        # Add more surgery documents as needed...
-    ]
+    surgeries = []
+    patient_ids = fetch_ids(collection_name="patients", id_field="patient_id")
+    surgeon_ids = fetch_ids(collection_name="surgeons", id_field="surgeon_id")
+    room_ids = fetch_ids(collection_name="operating_rooms", id_field="room_id")
+
+    surgery_types = ["Appendectomy", "Gallbladder Removal", "Hip Replacement"]
+    for _ in range(10):
+        surgeries.append({
+            "surgery_id": fake.unique.uuid4(),
+            "patient_id": patient_ids,
+            "surgeon_id": surgeon_ids,
+            "room_id": room_ids,
+            "scheduled_date": fake.date_between(start_date="-1y", end_date="today").isoformat(),
+            "surgery_type": random.choice(surgery_types),
+            "urgency_level": random.choice(["High", "Medium", "Low"]),
+            "duration": random.randint(1, 8),  # Duration in hours
+            "status": random.choice(["Scheduled", "Completed", "Cancelled"]),
+        })
+    return surgeries
+
+
+def fetch_ids(collection_name, id_field):
+    # Assume db is a global MongoDB client instance accessible here
+    collection = db[collection_name]
+    documents = collection.find({}, {id_field: 1})
+    ids = [doc[id_field] for doc in documents]
+    return ids
+
 
 def initialize_surgery_equipments():
-    return [
-        {
-            "equipment_id": "EQ001",
-            "name": "Scalpel",
-            "type": "Tool",
-            "availability": True
-        },
-        # Add more surgery equipment documents as needed...
-    ]
+    surgery_equipments = []
+    equipment_types = ["Scalpel", "Forceps", "Surgical Scissors", "Suture"]
+    for _ in range(10):
+        surgery_equipments.append({
+            "equipment_id": fake.unique.uuid4(),
+            "name": random.choice(equipment_types),
+            "type": random.choice(["Disposable", "Reusable"]),
+            "availability": fake.boolean(),
+        })
+    return surgery_equipments
+
+
 
 def initialize_surgery_equipment_usages():
-    return [
-        {
-            "usage_id": "EU001",
-            "surgery_id": "SUR001",
-            "equipment_id": "EQ001"
-        },
-        # Add more surgery equipment usage documents as needed...
-    ]
+    surgery_equipment_usages = []
+    for i in range(1, 11):  # Generate 10 unique equipment usages
+        surgery_equipment_usages.append({
+            "usage_id": f"SEU00{i}",
+            "surgery_id": f"SUR00{i}",
+            "equipment_id": f"EQ00{i}"
+        })
+    return surgery_equipment_usages
 
-def initialize_surgery_room_assignments():
-    return [
-        {
-            "assignment_id": "RA001",
-            "surgery_id": "SUR001",
-            "room_id": "OR001",
-            "start_time": "2023-07-01 08:00",
-            "end_time": "2023-07-01 10:00"
-        },
-        # Add more surgery room assignment documents as needed...
-    ]
 
-def initialize_surgery_staff_assignments():
-    return [
-        {
-            "assignment_id": "SA001",
-            "surgery_id": "SUR001",
-            "staff_id": "S002",
-            "role": "Surgeon"
-        },
-        # Add more surgery staff assignment documents as needed...
-    ]
+def initialize_surgery_staff_assignments(surgery_ids, staff_ids):
+    surgery_staff_assignments = []
+    roles = ["Lead Surgeon", "Assistant Surgeon", "Nursing Staff", "Technician"]
+    for surgery_id in surgery_ids:
+        surgery_staff_assignments.append({
+            "assignment_id": fake.uuid4(),
+            "surgery_id": surgery_id,
+            "staff_id": random.choice(staff_ids),
+            "role": random.choice(roles),
+        })
+    return surgery_staff_assignments
 
-def initialize_surgery_appointments():
-    return [
-        {
-            "appointment_id": "APPT001",
-            "surgery_id": "SUR001",
-            "patient_id": "P001",
-            "staff_assignments": [
-                {
-                    "staff_id": "S002",
-                    "role": "Lead Surgeon"
-                }
-                # Add more staff assignments as needed
-            ],
-            "room_id": "OR001",
-            "start_time": "2023-07-01T09:00:00",
-            "end_time": "2023-07-01T11:00:00"
-        },
-        # Add more appointments as needed...
-    ]
+
+
+from datetime import datetime, timedelta
+import random
+
+def initialize_surgery_room_assignments(surgery_ids, room_ids):
+    surgery_room_assignments = []
+    for surgery_id in surgery_ids:
+        start_date = datetime.now() - timedelta(days=random.randint(1, 365))
+        end_date = start_date + timedelta(hours=random.randint(1, 8))
+        surgery_room_assignments.append({
+            "assignment_id": fake.uuid4(),
+            "surgery_id": surgery_id,
+            "room_id": random.choice(room_ids),
+            "start_time": start_date.isoformat(),
+            "end_time": end_date.isoformat(),
+        })
+    return surgery_room_assignments
+
+
+def initialize_surgery_appointments(surgery_ids, patient_ids, room_ids):
+    surgery_appointments = []
+    for surgery_id in surgery_ids:
+        start_date = datetime.now() - timedelta(days=random.randint(1, 365))
+        end_date = start_date + timedelta(hours=random.randint(1, 8))
+        surgery_appointments.append({
+            "appointment_id": fake.uuid4(),
+            "surgery_id": surgery_id,
+            "patient_id": random.choice(patient_ids),
+            "staff_assignments": [{
+                "staff_id": fake.uuid4(),  # Assuming you want to randomly generate or select from staff_ids
+                "role": "Lead Surgeon",
+            }],
+            "room_id": random.choice(room_ids),
+            "start_time": start_date.isoformat(),
+            "end_time": end_date.isoformat(),
+        })
+    return surgery_appointments
+
+

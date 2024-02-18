@@ -66,9 +66,4 @@ class MongoDBTransactionManager:
         finally:
             session.end_session()
 
-# Example Usage
-if __name__ == "__main__":
-    with MongoDBTransactionManager.transaction() as session:
-        db = MongoDBClient.get_db()
-        # Perform transactional operations here, e.g.,
-        # db.myCollection.insert_one({"key": "value"}, session=session)
+
