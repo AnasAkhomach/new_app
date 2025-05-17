@@ -1,41 +1,31 @@
-from pymongo import MongoClient
 import os
-from contextlib import contextmanager
-from mongodb_transaction_manager import MongoDBClient  # Make sure to import your MongoDBClient class
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+from dotenv import load_dotenv
 
-# Define collections based on the models
-db = MongoDBClient.get_db()  # Use the singleton to access the database
-equipment_collection = db.equipment
-operating_rooms_collection = db.operating_rooms
-patients_collection = db.patients
-staff_collection = db.staff
-surgeons_collection = db.surgeons
-surgeries_collection = db.surgeries
-surgery_appointments_collection = db.surgery_appointments
-surgery_equipment_usage_collection = db.surgery_equipment_usage
-surgery_room_assignments_collection = db.surgery_room_assignments
-surgery_staff_assignments_collection = db.surgery_staff_assignments
+load_dotenv()
 
-@contextmanager
-def mongodb_transaction():
-    client = MongoDBClient.get_client()  # Use the singleton to get the MongoClient instance
-    session = client.start_session()
-    session.start_transaction()
+DB_USER = os.getenv("DB_USER")
+from urllib.parse import quote_plus
+
+DB_PASSWORD = quote_plus(os.getenv("DB_PASSWORD")) if os.getenv("DB_PASSWORD") else None
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+
+DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable not set.")
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
     try:
-        yield session
-        session.commit_transaction()
-    except Exception as e:
-        session.abort_transaction()
-        raise e
+        yield db
     finally:
-        session.end_session()
-
-    @classmethod
-    def get_db(cls):
-        if cls._db is None:
-            # Adjust these values as necessary
-            MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-            DATABASE_NAME = os.getenv("MONGO_DATABASE_NAME", "your_database_name")
-            cls._client = MongoClient(MONGO_URI)
-            cls._db = cls._client[DATABASE_NAME]
-        return cls._db
+        db.close()

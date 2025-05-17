@@ -1,64 +1,75 @@
-import sys
-import os
-from pymongo.errors import PyMongoError
+"""Service layer for managing patients in the surgical scheduling system."""
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from db_config import db
+from sqlalchemy.exc import SQLAlchemyError
 from models import Patient
 
+
 class PatientService:
+    """Provides services for managing patients."""
+
     @staticmethod
-    def create_patient(patient_data):
+    def create_patient(db, patient_data):  # Added db parameter
         """Creates a new patient record."""
         try:
-            document = patient_data.to_document()
-            db.patients.insert_one(document)
-            print(f"Patient {document['name']} created successfully.")
-        except PyMongoError as e:
+            new_patient = Patient(
+                name=patient_data["name"],
+                dob=patient_data["dob"],
+                contact_info=patient_data["contact_info"],
+                privacy_consent=patient_data["privacy_consent"],
+            )
+            db.add(new_patient)
+            db.commit()
+            db.refresh(new_patient)  # Added refresh
+            print(f"Patient {new_patient.name} created successfully.")
+            return new_patient.patient_id  # Added return ID
+        except SQLAlchemyError as e:
+            db.rollback()
             print(f"Error creating patient: {e}")
+            return None  # Added return None on error
 
     @staticmethod
-    def update_patient(patient_id, update_fields):
+    def update_patient(db, patient_id, update_fields):  # Added db parameter
         """Updates an existing patient record."""
         try:
-            result = db.patients.update_one({"patient_id": patient_id}, {"$set": update_fields})
-            if result.modified_count:
+            result = (
+                db.query(Patient).filter_by(patient_id=patient_id).update(update_fields)
+            )
+            db.commit()
+            if result:
                 print(f"Patient {patient_id} updated successfully.")
-            else:
-                print(f"No patient found with ID {patient_id} or no new data to update.")
-        except PyMongoError as e:
+                return True
+            print(f"No patient found with ID {patient_id} or no new data to update.")
+            return False
+        except SQLAlchemyError as e:
+            db.rollback()
             print(f"Error updating patient: {e}")
+            return False
 
     @staticmethod
-    def delete_patient(patient_id):
+    def delete_patient(db, patient_id):  # Added db parameter
         """Deletes a patient record."""
         try:
-            result = db.patients.delete_one({"patient_id": patient_id})
-            if result.deleted_count:
+            result = db.query(Patient).filter_by(patient_id=patient_id).delete()
+            db.commit()
+            if result:
                 print(f"Patient {patient_id} deleted successfully.")
-            else:
-                print(f"No patient found with ID {patient_id}.")
-        except PyMongoError as e:
+                return True
+            print(f"No patient found with ID {patient_id}.")
+            return False
+        except SQLAlchemyError as e:
+            db.rollback()
             print(f"Error deleting patient: {e}")
+            return False
 
     @staticmethod
-    def get_patient(patient_id):
+    def get_patient(db, patient_id):  # Added db parameter
         """Retrieves a patient record by patient_id and returns a Patient instance."""
         try:
-            document = db.patients.find_one({"patient_id": patient_id})
-            if document:
-                return Patient.from_document(document)
-            else:
-                print(f"No patient found with ID {patient_id}")
-                return None
-        except PyMongoError as e:
+            patient = db.query(Patient).filter_by(patient_id=patient_id).first()
+            if patient:
+                return patient
+            print(f"No patient found with ID {patient_id}")
+            return None
+        except SQLAlchemyError as e:
             print(f"Error retrieving patient: {e}")
             return None
-
-# Example usage
-if __name__ == "__main__":
-    try:
-        new_patient = Patient("PAT001", "Alice Johnson", "1985-04-12", "555-1234", "No known allergies", True)
-        PatientService.create_patient(new_patient)
-    except Exception as e:
-        print(f"An error occurred: {e}")

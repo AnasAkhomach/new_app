@@ -1,22 +1,47 @@
+from datetime import date, datetime # Added datetime for parsing
+from models import Patient, Staff, Surgeon, OperatingRoom, SurgeryEquipment, Surgery # Added Surgery model
+
+
 def initialize_patients():
     return [
         {
             "patient_id": "P001",
             "name": "John Doe",
             "dob": "1990-01-01",
-            "contact_info": {
-                "phone": "555-0100",
-                "email": "john.doe@example.com"
-            },
+            "contact_info": {"phone": "555-0100", "email": "john.doe@example.com"},
             "medical_history": [
                 {"condition": "Condition A", "date_diagnosed": "2018-05-01"},
                 {"condition": "Condition B", "date_diagnosed": "2019-11-15"},
                 # Add more medical history records as needed
             ],
-            "privacy_consent": True
+            "privacy_consent": True,
         },
         # Add more patient documents as needed...
     ]
+
+
+def initialize_patients_sqlalchemy():
+    return [
+        Patient( # ID will be auto-generated (1)
+            name="John Doe",
+            dob=date(1990, 1, 1),
+            contact_info="555-0100, john.doe@example.com",
+            privacy_consent=True,
+        ),
+        Patient( # ID will be auto-generated (2)
+            name="Jane Smith",
+            dob=date(1985, 5, 10),
+            contact_info="555-0102, jane.smith@example.com",
+            privacy_consent=True,
+        ),
+        Patient( # ID will be auto-generated (3)
+            name="Alice Brown",
+            dob=date(1970, 8, 20),
+            contact_info="555-0103, alice.brown@example.com",
+            privacy_consent=False,
+        ),
+    ]
+
 
 def initialize_staff_members():
     return [
@@ -25,52 +50,89 @@ def initialize_staff_members():
             "name": "Jane Smith",
             "role": "Nurse",
             "specialization": None,  # This can be null/None for non-surgeons
-            "contact_info": {
-                "phone": "555-0101",
-                "email": "jane.smith@example.com"
-            },
+            "contact_info": {"phone": "555-0101", "email": "jane.smith@example.com"},
             "availability_schedule": [
                 {"day": "Monday", "start": "08:00", "end": "17:00"},
                 {"day": "Tuesday", "start": "08:00", "end": "17:00"},
                 # Add more availability slots as needed
-            ]
+            ],
         },
         # Add more staff member documents as needed...
     ]
 
+
+def initialize_staff_members_sqlalchemy():
+    return [
+        Staff(
+            name="Jane Smith",
+            role="Nurse",
+            specialization=None,
+            contact_info="555-0101, jane.smith@example.com",
+            availability=True,
+        ),
+        # Add more Staff instances as needed
+    ]
+
+
 def initialize_surgeons():
     return [
         {
-            'surgeon_id': 'S001',
-            'name': 'Dr. Emily Smith',
-            'contact_info': {
-                'email': 'emily.smith@example.com',
-                'phone': '555-0101'
-            },
-            'specialization': 'Cardiothoracic Surgery',
-            'credentials': ['Board Certified in Thoracic Surgery', 'MD from Example Medical School'],
-            'availability': [
-                {'day': 'Monday', 'start': '08:00', 'end': '16:00'},
-                {'day': 'Wednesday', 'start': '08:00', 'end': '16:00'}
+            "surgeon_id": "S001",
+            "name": "Dr. Emily Smith",
+            "contact_info": {"email": "emily.smith@example.com", "phone": "555-0101"},
+            "specialization": "Cardiothoracic Surgery",
+            "credentials": [
+                "Board Certified in Thoracic Surgery",
+                "MD from Example Medical School",
             ],
-            'surgeon_preferences': {'preferred_operating_room': 'OR1'}
+            "availability": [
+                {"day": "Monday", "start": "08:00", "end": "16:00"},
+                {"day": "Wednesday", "start": "08:00", "end": "16:00"},
+            ],
+            "surgeon_preferences": {"preferred_operating_room": "OR1"},
         },
         {
-            'surgeon_id': 'S002',
-            'name': 'Dr. John Doe',
-            'contact_info': {
-                'email': 'john.doe@example.com',
-                'phone': '555-0202'
-            },
-            'specialization': 'Orthopedic Surgery',
-            'credentials': ['Board Certified in Orthopedic Surgery', 'MD from Another Example Medical School'],
-            'availability': [
-                {'day': 'Tuesday', 'start': '10:00', 'end': '18:00'},
-                {'day': 'Thursday', 'start': '10:00', 'end': '18:00'}
+            "surgeon_id": "S002",
+            "name": "Dr. John Doe",
+            "contact_info": {"email": "john.doe@example.com", "phone": "555-0202"},
+            "specialization": "Orthopedic Surgery",
+            "credentials": [
+                "Board Certified in Orthopedic Surgery",
+                "MD from Another Example Medical School",
             ],
-            'surgeon_preferences': {'preferred_operating_room': 'OR2'}
-        }
+            "availability": [
+                {"day": "Tuesday", "start": "10:00", "end": "18:00"},
+                {"day": "Thursday", "start": "10:00", "end": "18:00"},
+            ],
+            "surgeon_preferences": {"preferred_operating_room": "OR2"},
+        },
         # Add more surgeons as needed
+    ]
+
+
+def initialize_surgeons_sqlalchemy():
+    return [
+        Surgeon( # ID will be auto-generated (1)
+            name="Dr. Emily Smith",
+            contact_info="555-0101, emily.smith@example.com",
+            specialization="Cardiothoracic Surgery",
+            credentials="Board Certified in Thoracic Surgery; MD from Example Medical School",
+            availability=True,
+        ),
+        Surgeon( # ID will be auto-generated (2)
+            name="Dr. John Doe",
+            contact_info="555-0202, john.doe@example.com",
+            specialization="Orthopedic Surgery",
+            credentials="Board Certified in Orthopedic Surgery; MD from Another Example Medical School",
+            availability=True,
+        ),
+        Surgeon( # ID will be auto-generated (3)
+            name="Dr. Alan Turing",
+            contact_info="555-0303, alan.turing@example.com",
+            specialization="Neurosurgery",
+            credentials="MD, PhD, FRCSEd",
+            availability=True,
+        ),
     ]
 
 
@@ -79,10 +141,20 @@ def initialize_operating_rooms():
         {
             "room_id": "OR001",
             "location": "Main Building - Room 101",
-            "equipment_list": []
+            "equipment_list": [],
         },
         # Add more operating room documents as needed...
     ]
+
+
+def initialize_operating_rooms_sqlalchemy():
+    return [
+        OperatingRoom(location="Main Building - Room 101"), # ID will be auto-generated (1)
+        OperatingRoom(location="Main Building - Room 102"), # ID will be auto-generated (2)
+        OperatingRoom(location="West Wing - Room 201"),    # ID will be auto-generated (3)
+        OperatingRoom(location="East Wing - Room A"),      # ID will be auto-generated (4)
+    ]
+
 
 def initialize_surgeries():
     return [
@@ -96,10 +168,52 @@ def initialize_surgeries():
             "urgency_level": "High",
             "duration": 120,
             "status": "Scheduled",
-            "priority": "Normal"
+            "priority": "Normal",
         },
         # Add more surgery documents as needed...
     ]
+
+def initialize_surgeries_sqlalchemy():
+    # Define more comprehensive surgery data directly here for clarity
+    # patient_id and surgeon_id will now be integers, assuming they correspond to auto-generated IDs.
+    # For simplicity, we'll assume Patient IDs 1,2,3 and Surgeon IDs 1,2,3 are created in that order.
+    return [
+        Surgery( # surgery_id will be auto-generated
+            patient_id=1, surgeon_id=1, surgery_type="Appendectomy",
+            scheduled_date=datetime(2024, 7, 1, 8, 0, 0), # Set scheduled_date
+            start_time=datetime(2024, 7, 1, 8, 0, 0), end_time=datetime(2024, 7, 1, 10, 0, 0),
+            duration_minutes=120, status="Scheduled", urgency_level="High"
+            # priority field is not in the Surgery model from models.py, removing it.
+            # Changed status to "Scheduled" and urgency to urgency_level to match model
+        ),
+        Surgery(
+            patient_id=2, surgeon_id=2, surgery_type="Knee Replacement",
+            scheduled_date=datetime(2024, 7, 1, 10, 30, 0),
+            start_time=datetime(2024, 7, 1, 10, 30, 0), end_time=datetime(2024, 7, 1, 13, 0, 0),
+            duration_minutes=150, status="Scheduled", urgency_level="Medium"
+        ),
+        Surgery(
+            patient_id=3, surgeon_id=3, surgery_type="Craniotomy",
+            scheduled_date=datetime(2024, 7, 2, 9, 0, 0),
+            start_time=datetime(2024, 7, 2, 9, 0, 0), end_time=datetime(2024, 7, 2, 14, 0, 0),
+            duration_minutes=300, status="Scheduled", urgency_level="High"
+        ),
+        Surgery(
+            patient_id=1, surgeon_id=1, surgery_type="Coronary Bypass",
+            scheduled_date=datetime(2024, 7, 3, 8, 0, 0),
+            start_time=datetime(2024, 7, 3, 8, 0, 0), end_time=datetime(2024, 7, 3, 12, 0, 0),
+            duration_minutes=240, status="Scheduled", urgency_level="High"
+        ),
+        Surgery(
+            patient_id=2, surgeon_id=2, surgery_type="Hip Arthroscopy",
+            scheduled_date=datetime(2024, 7, 4, 13, 0, 0),
+            start_time=datetime(2024, 7, 4, 13, 0, 0), end_time=datetime(2024, 7, 4, 15, 0, 0),
+            duration_minutes=120, status="Scheduled", urgency_level="Low"
+        ),
+    ]
+
+
+
 
 def initialize_surgery_equipments():
     return [
@@ -107,20 +221,25 @@ def initialize_surgery_equipments():
             "equipment_id": "EQ001",
             "name": "Scalpel",
             "type": "Tool",
-            "availability": True
+            "availability": True,
         },
         # Add more surgery equipment documents as needed...
     ]
 
+
+def initialize_surgery_equipments_sqlalchemy():
+    return [
+        SurgeryEquipment(name="Scalpel", type="Tool", availability=True),
+        # Add more SurgeryEquipment instances as needed
+    ]
+
+
 def initialize_surgery_equipment_usages():
     return [
-        {
-            "usage_id": "EU001",
-            "surgery_id": "SUR001",
-            "equipment_id": "EQ001"
-        },
+        {"usage_id": "EU001", "surgery_id": "SUR001", "equipment_id": "EQ001"},
         # Add more surgery equipment usage documents as needed...
     ]
+
 
 def initialize_surgery_room_assignments():
     return [
@@ -129,10 +248,11 @@ def initialize_surgery_room_assignments():
             "surgery_id": "SUR001",
             "room_id": "OR001",
             "start_time": "2023-07-01 08:00",
-            "end_time": "2023-07-01 10:00"
+            "end_time": "2023-07-01 10:00",
         },
         # Add more surgery room assignment documents as needed...
     ]
+
 
 def initialize_surgery_staff_assignments():
     return [
@@ -140,10 +260,11 @@ def initialize_surgery_staff_assignments():
             "assignment_id": "SA001",
             "surgery_id": "SUR001",
             "staff_id": "S002",
-            "role": "Surgeon"
+            "role": "Surgeon",
         },
         # Add more surgery staff assignment documents as needed...
     ]
+
 
 def initialize_surgery_appointments():
     return [
@@ -152,15 +273,12 @@ def initialize_surgery_appointments():
             "surgery_id": "SUR001",
             "patient_id": "P001",
             "staff_assignments": [
-                {
-                    "staff_id": "S002",
-                    "role": "Lead Surgeon"
-                }
+                {"staff_id": "S002", "role": "Lead Surgeon"}
                 # Add more staff assignments as needed
             ],
             "room_id": "OR001",
             "start_time": "2023-07-01T09:00:00",
-            "end_time": "2023-07-01T11:00:00"
+            "end_time": "2023-07-01T11:00:00",
         },
         # Add more appointments as needed...
     ]

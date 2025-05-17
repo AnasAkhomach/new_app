@@ -1,6 +1,5 @@
-from db_config import db
 from datetime import datetime
-from mongodb_transaction_manager import MongoDBClient  # Ensure this import matches your consolidated script name
+# Utility calculators are assumed to be refactored for SQLAlchemy or to work with passed data
 from utils.equipment_utilization_calculator import EquipmentUtilizationCalculator
 from utils.operational_cost_calculator import OperationalCostCalculator
 from utils.room_utilization_calculator import RoomUtilizationCalculator
@@ -9,439 +8,324 @@ from utils.preference_satisfaction_calculator import PreferenceSatisfactionCalcu
 from utils.resource_utilization_efficiency_calculator import ResourceUtilizationEfficiencyCalculator
 from utils.equipment_utilization_efficiency_calculator import EquipmentUtilizationEfficiencyCalculator
 
-
-from scheduling_utils import(is_surgeon_available,
-                            is_equipment_available,
-                            is_room_available,
-                            is_staff_available)
-
-
-from mongodb_transaction_manager import MongoDBClient
-# Ensure you have imported all calculator classes above
+# scheduling_utils.py was MongoDB-dependent and has been removed.
+# Placeholder/simplified logic or direct implementation will be used if its functionality is critical.
 
 class Solution:
-    def __init__(self):
-        # Establish a database connection
-        self.db = MongoDBClient.get_db()
-        
-        # Fetch initial data needed for calculations
-        self.fetch_initial_data()
-        
-        # Initialize calculator instances for different metrics
+    def __init__(self, db_session=None):
+        self.db_session = db_session # SQLAlchemy session
+
+        # Data attributes, to be populated via db_session or passed directly
+        self.surgeries = []
+        self.rooms = {} # room_id: room_object
+        self.equipment = {} # equipment_id: equipment_object
+        self.surgeons = []
+        self.room_assignments = []
+
         self.initialize_calculators()
 
         self.start_date = None
         self.end_date = None
+        self.score = 0
+        # Metrics attributes
+        self.workload_balance = None
+        self.preference_satisfaction = None
+        self.resource_utilization_efficiency = None
+        self.surgeon_schedule_compactness = None
+        self.equipment_utilization_efficiency = None
+        self.operational_cost_minimization = None
+        self.room_utilization_efficiency = None
 
     def set_analysis_period(self, start_date, end_date):
-        """Sets the analysis period for calculations."""
         self.start_date = start_date
-        self.end_date = end_date                
-        
+        self.end_date = end_date
+
     def fetch_initial_data(self):
-        # Fetch surgeries data
-        self.surgeries = list(self.db.surgeries.find({}))
-        
-        # Fetch rooms data and convert it into a dictionary for easy access
-        self.rooms = {room['room_id']: room for room in self.db.rooms.find({})}
-        
-        # Fetch equipment data and convert it into a dictionary for easy access
-        self.equipment = {equipment['equipment_id']: equipment for equipment in self.db.equipment.find({})}
-        
-        # Fetch surgeons data
-        self.surgeons = list(self.db.surgeons.find({}))
-        
-        # Fetch room assignments data
-        self.room_assignments = list(self.db.room_assignments.find({}))
-  
+        print("fetch_initial_data: Placeholder for fetching data using SQLAlchemy session.")
+        if self.db_session:
+            # Example: self.surgeries = self.db_session.query(SurgeryModel).all()
+            # self.rooms = {room.room_id: room for room in self.db_session.query(RoomModel).all()}
+            # ... and so on for other data attributes
+            pass
+        else:
+            print("fetch_initial_data: No db_session provided. Using empty/default data.")
+
     def initialize_calculators(self):
-        # Initialize the Workload Balance Calculator
-        self.workload_balance_calculator = WorkloadBalanceCalculator()
-        
-        # Initialize the Preference Satisfaction Calculator
-        self.preference_satisfaction_calculator = PreferenceSatisfactionCalculator()
-        
-        # Initialize the Equipment Utilization Efficiency Calculator
-        self.equipment_utilization_calculator = EquipmentUtilizationCalculator()
-        
-        # Initialize the Operational Cost Calculator
-        self.operational_cost_calculator = OperationalCostCalculator()
-        
-        # Initialize the Room Utilization Efficiency Calculator
-        self.room_utilization_calculator = RoomUtilizationCalculator()
-
-        # Initialize each calculator with necessary parameters
-        self.resource_utilization_efficiency_calculator = ResourceUtilizationEfficiencyCalculator()
-
-        start_date = datetime(2023, 1, 1)
-        end_date = datetime(2023, 12, 31)
-        efficiency = self.resource_utilization_efficiency_calculator.calculate(start_date, end_date)
-
-        # Display the calculated efficiency
-        print("Resource Utilization Efficiency:")
-        for resource_id, efficiency_percent in efficiency.items():
-            print(f"{resource_id}: {efficiency_percent}%")
-
-        # Make sure this line is included for equipment utilization efficiency calculator
-        self.equipment_utilization_efficiency_calculator = EquipmentUtilizationEfficiencyCalculator()
+        # Pass db_session to calculators if they need it, or ensure they work with data passed to their methods
+        self.workload_balance_calculator = WorkloadBalanceCalculator(db_session=self.db_session)
+        self.preference_satisfaction_calculator = PreferenceSatisfactionCalculator(db_session=self.db_session)
+        self.equipment_utilization_calculator = EquipmentUtilizationCalculator(db_session=self.db_session)
+        self.operational_cost_calculator = OperationalCostCalculator(db_session=self.db_session)
+        self.room_utilization_calculator = RoomUtilizationCalculator(db_session=self.db_session)
+        self.resource_utilization_efficiency_calculator = ResourceUtilizationEfficiencyCalculator(db_session=self.db_session)
+        self.equipment_utilization_efficiency_calculator = EquipmentUtilizationEfficiencyCalculator(db_session=self.db_session)
+        print("Calculators initialized.")
 
     def calculate_score(self):
-        # Reset score before recalculating
-        self.score = 0
-        # Calculate score components
-        self.score += self.calculate_workload_balance()
-        self.score += self.calculate_preference_satisfaction()
-        self.score += self.calculate_resource_utilization_efficiency()
-        self.score += self.calculate_surgeon_schedule_compactness()
-        self.score += self.calculate_equipment_utilization_efficiency()
-        self.score += self.calculate_operational_cost_minimization()
-        self.score += self.calculate_room_utilization_efficiency()
+        # Ensure all metrics are calculated before scoring
+        if any(m is None for m in [self.workload_balance, self.preference_satisfaction,
+                                   self.resource_utilization_efficiency, self.equipment_utilization_efficiency,
+                                   self.surgeon_schedule_compactness, self.operational_cost_minimization,
+                                   self.room_utilization_efficiency]):
+            print("Warning: Not all metrics calculated. Score may be incomplete.")
+            # Fallback to zero or re-calculate if necessary
+            self.calculate_all_metrics() # Attempt to calculate them if not done
+
+        # Example weights (these should be class attributes or configurable)
+        weight_workload_balance = 2.0
+        weight_preference_satisfaction = 1.5
+        weight_resource_utilization_efficiency = 2.0
+        weight_equipment_utilization_efficiency = 1.0
+        weight_surgeon_schedule_compactness = 1.5
+        weight_operational_cost_minimization = 2.5
+        weight_room_utilization_efficiency = 2.0
+
+        self.score = (
+            (self.workload_balance or 0) * weight_workload_balance +
+            (self.preference_satisfaction or 0) * weight_preference_satisfaction +
+            (self.resource_utilization_efficiency or 0) * weight_resource_utilization_efficiency +
+            (self.equipment_utilization_efficiency or 0) * weight_equipment_utilization_efficiency +
+            (self.surgeon_schedule_compactness or 0) * weight_surgeon_schedule_compactness +
+            (self.operational_cost_minimization or 0) * weight_operational_cost_minimization +
+            (self.room_utilization_efficiency or 0) * weight_room_utilization_efficiency
+        )
+        print(f"Overall solution score: {self.score}")
         return self.score
 
     def update_metrics(self):
-        self.workload_balance = self.workload_balance_calculator.calculate_workload_balance()
-        self.preference_satisfaction = self.preference_satisfaction_calculator.calculate(self.surgeries)
-        self.resource_utilization_efficiency = self.resource_utilization_efficiency_calculator.calculate(self.start_date, self.end_date)
-        self.equipment_utilization_efficiency = self.equipment_utilization_efficiency_calculator.calculate(self.start_date, self.end_date)
-        self.room_utilization_efficiency = self.room_utilization_calculator.calculate(self.start_date, self.end_date)
-        # Update the score based on the new metrics
+        """Recalculates all metrics and the overall score."""
+        self.calculate_all_metrics()
         self.calculate_score()
+        print("Metrics and score updated.")
 
-    def calculate_workload_balance(self):
-        """
-        Calculates and updates the workload balance metric using the WorkloadBalanceCalculator.
-        """
+    # Individual metric calculation methods
+    def _calculate_workload_balance(self):
         try:
-            self.workload_balance = self.workload_balance_calculator.calculate()
+            # Assuming surgeries data is in self.surgeries
+            self.workload_balance = self.workload_balance_calculator.calculate_workload_balance(self.surgeries)
         except Exception as e:
             print(f"Error calculating workload balance: {e}")
-            self.workload_balance = None
+            self.workload_balance = 0 # Default to 0 on error
 
-    def calculate_preference_satisfaction(self):
-        """
-        Calculates and updates the preference satisfaction metric using the PreferenceSatisfactionCalculator.
-        """
+    def _calculate_preference_satisfaction(self):
         try:
-            self.preference_satisfaction = self.preference_satisfaction_calculator.calculate(self.surgeries)
+            # Assuming surgeries data and surgeon_preferences_map are available or fetched
+            # This might require fetching surgeon preferences if not already loaded
+            surgeon_preferences_map = self._get_all_surgeon_preferences() # Helper to get map
+            self.preference_satisfaction = self.preference_satisfaction_calculator.calculate(self.surgeries, surgeon_preferences_map)
         except Exception as e:
             print(f"Error calculating preference satisfaction: {e}")
-            self.preference_satisfaction = None
+            self.preference_satisfaction = 0
 
-    def calculate_equipment_utilization_efficiency(self):
-        """
-        Calculates and updates the equipment utilization efficiency using the EquipmentUtilizationCalculator.
-        """
+    def _calculate_equipment_utilization_efficiency(self):
         try:
-            self.equipment_utilization_efficiency = self.equipment_utilization_calculator.calculate(self.start_date, self.end_date)
+            # Requires self.surgeries and self.equipment data
+            self.equipment_utilization_efficiency = self.equipment_utilization_efficiency_calculator.calculate(
+                surgeries_data=self.surgeries, equipments_data=list(self.equipment.values()),
+                start_date=self.start_date, end_date=self.end_date
+            )
         except Exception as e:
             print(f"Error calculating equipment utilization efficiency: {e}")
-            self.equipment_utilization_efficiency = None
+            self.equipment_utilization_efficiency = 0
 
-    def calculate_operational_cost_minimization(self):
-        """
-        Calculates and updates the operational cost using the OperationalCostCalculator.
-        """
+    def _calculate_operational_cost_minimization(self):
         try:
-            self.operational_cost_minimization = self.operational_cost_calculator.calculate()
+            self.operational_cost_minimization = self.operational_cost_calculator.calculate_average_duration(self.surgeries)
         except Exception as e:
             print(f"Error calculating operational cost: {e}")
-            self.operational_cost_minimization = None
+            self.operational_cost_minimization = float('inf') # Higher is worse
 
-    def calculate_room_utilization_efficiency(self):
-        """
-        Calculates and updates the room utilization efficiency using the RoomUtilizationCalculator.
-        """
+    def _calculate_room_utilization_efficiency(self):
         try:
-            self.room_utilization_efficiency = self.room_utilization_calculator.calculate(self.start_date, self.end_date)
+            # Requires self.room_assignments data
+            self.room_utilization_efficiency = self.room_utilization_calculator.calculate(
+                room_assignments_data=self.room_assignments,
+                start_date=self.start_date, end_date=self.end_date
+            )
         except Exception as e:
             print(f"Error calculating room utilization efficiency: {e}")
-            self.room_utilization_efficiency = None
+            self.room_utilization_efficiency = 0
 
-    def calculate_all_metrics(self):
-        """Calculates and updates all metrics for the solution."""
-        # Assuming self.surgeries is already populated
-        self.workload_balance = self.workload_balance_calculator.calculate_workload_balance(self.surgeries)
-        self.preference_satisfaction = self.preference_satisfaction_calculator.calculate(self.surgeries)
-        self.resource_utilization_efficiency = self.resource_utilization_efficiency_calculator.calculate(self.start_date, self.end_date)
-        self.equipment_utilization_efficiency = self.equipment_utilization_efficiency_calculator.calculate(self.start_date, self.end_date)
-        self.operational_cost_minimization = self.operational_cost_calculator.calculate(self.surgeries)
-        self.room_utilization_efficiency = self.room_utilization_calculator.calculate(self.start_date, self.end_date)
-        self.resource_utilization_efficiency_calculator = ResourceUtilizationEfficiencyCalculator()
-               
-        # Update more metrics as needed
-
-        # You might want to return the calculated metrics or print them
-        # For demonstration purposes, we'll just print them here
-        print(f"Workload Balance: {self.workload_balance}")
-        print(f"Preference Satisfaction: {self.preference_satisfaction}")
-        print(f"Resource Utilization Efficiency: {self.resource_utilization_efficiency}")
-        print(f"Equipment Utilization Efficiency: {self.equipment_utilization_efficiency}")
-        print(f"Operational Cost Minimization: {self.operational_cost_minimization}")
-        print(f"Room Utilization Efficiency: {self.room_utilization_efficiency}")
-        # Print more metrics as needed
-
-
-
-
-
-
-
-    def get_surgeon_preferences(self, surgeon_id, db):
-        """
-        Retrieves a surgeon's preferences from the database, now optimized with db parameter.
-        """
+    def _calculate_resource_utilization_efficiency(self):
         try:
-            preferences_document = db.surgeon_preferences.find_one({"surgeon_id": surgeon_id})
-            return preferences_document.get('preferences', {}) if preferences_document else {}
+            self.resource_utilization_efficiency = self.resource_utilization_efficiency_calculator.calculate(
+                surgeries_data=self.surgeries,
+                start_date=self.start_date,
+                end_date=self.end_date
+            )
         except Exception as e:
-            print(f"Error fetching preferences for surgeon {surgeon_id}: {e}")
-            return {}
+            print(f"Error calculating resource utilization efficiency: {e}")
+            self.resource_utilization_efficiency = 0
 
-    def check_time_slot(self, surgery_id, proposed_start, proposed_end):
-        """
-        Checks if a proposed time slot is available for a given surgery.
-
-        Args:
-            surgery_id (str): The ID of the surgery.
-            proposed_start (datetime): The proposed start time for the surgery.
-            proposed_end (datetime): The proposed end time for the surgery.
-
-        Returns:
-            bool: True if the time slot is available, False otherwise.
-        """
-        # Check surgeon availability
-        surgery_details = self.db.surgeries.find_one({"_id": surgery_id})
-        if not self.is_surgeon_available(surgery_details["surgeon_id"], proposed_start, proposed_end):
-            print("Surgeon not available for the proposed time.")
-            return False
-
-        # Check room availability
-        if not self.is_room_available(surgery_details["room_id"], proposed_start, proposed_end):
-            print("Operating room not available for the proposed time.")
-            return False
-
-        # Check equipment availability (if required)
-        if "equipment_needed" in surgery_details and not self.check_equipment_availability(surgery_id, proposed_start, proposed_end):
-            print("Required equipment not available for the proposed time.")
-            return False
-
-        # Additional checks can be placed here (e.g., staff availability)
-
-        return True
-        
-    def get_dynamic_room_availability(self, db):
-        # Example: Fetching room availability considering dynamic factors
-        room_availability = {}
-        rooms = db.rooms.find({})  # Assuming a collection 'rooms' with availability details
-        for room in rooms:
-            # Calculate available hours considering maintenance or closures
-            available_hours = room['default_available_hours']  # Base hours
-            # Subtract hours based on maintenance schedules or closures
-            for maintenance in room.get('maintenance_periods', []):
-                start, end = maintenance['start'], maintenance['end']
-                # Simplified calculation; actual logic may vary
-                available_hours -= (end - start).total_seconds() / 3600
-            room_availability[room['_id']] = max(0, available_hours)  # Ensure non-negative
-        return room_availability
-    
-    def calculate_surgeon_schedule_compactness(self):
-        """
-        Calculates the compactness of each surgeon's schedule, aiming to minimize gaps between surgeries.
-        """
-        db = MongoDBClient.get_db()  # Ensure consistent database access
+    def _calculate_surgeon_schedule_compactness(self):
         surgeon_schedules = {}
         compactness_scores = []
-
         try:
-            # Ideally, fetch surgery times and surgeon_ids directly from the database
-            # For demonstration, assuming self.surgeries is already populated
             for surgery in self.surgeries:
-                surgeon_id = surgery.get('surgeon_id')
+                surgeon_id = getattr(surgery, 'surgeon_id', None)
+                start_time_str = getattr(surgery, 'start_time', None)
+                end_time_str = getattr(surgery, 'end_time', None)
+
+                if not all([surgeon_id, start_time_str, end_time_str]):
+                    continue
+
+                # Ensure times are datetime objects
+                start_time = datetime.fromisoformat(start_time_str) if isinstance(start_time_str, str) else start_time_str
+                end_time = datetime.fromisoformat(end_time_str) if isinstance(end_time_str, str) else end_time_str
+
                 if surgeon_id not in surgeon_schedules:
                     surgeon_schedules[surgeon_id] = []
-                start_time = surgery.get('start_time')
-                end_time = surgery.get('end_time')
-                if start_time and end_time:  # Ensure times are present
-                    surgeon_schedules[surgeon_id].append((start_time, end_time))
+                surgeon_schedules[surgeon_id].append((start_time, end_time))
 
             for surgeon_id, times in surgeon_schedules.items():
                 times.sort(key=lambda x: x[0])  # Sort surgeries by start time
-                gaps = [max(0, (times[i][0] - times[i-1][1]).total_seconds() / 3600) for i in range(1, len(times))]
-                compactness = 1 / (1 + sum(gaps)) if gaps else 1  # Higher score for less idle time
+                gaps = [(times[i][0] - times[i-1][1]).total_seconds() / 3600
+                        for i in range(1, len(times)) if times[i][0] > times[i-1][1]]
+                total_gap_hours = sum(gaps)
+                # Compactness: Higher is better. Inverse of (1 + total_gap_hours)
+                compactness = 1 / (1 + total_gap_hours) if total_gap_hours >= 0 else 1
                 compactness_scores.append(compactness)
 
             overall_compactness = sum(compactness_scores) / len(compactness_scores) if compactness_scores else 0
             self.surgeon_schedule_compactness = overall_compactness
-            return overall_compactness
         except Exception as e:
-            print(f"An error occurred while calculating surgeon schedule compactness: {e}")
-            self.surgeon_schedule_compactness = None
-            return None
+            print(f"Error calculating surgeon schedule compactness: {e}")
+            self.surgeon_schedule_compactness = 0
 
-    def calculate_and_set_operational_cost(self):
-        # Create an instance of the calculator with the database connection
-        db = MongoDBClient.get_db()
-        cost_calculator = OperationalCostCalculator(db)
-
-        # Calculate the average surgery duration
-        self.average_surgery_duration = cost_calculator.calculate_operational_cost_minimization()
-
-        # Use the average duration as a proxy for operational cost
-        # You might want to store it in the instance or use it directly
-        # For example:
-        self.operational_cost_minimization = self.average_surgery_duration
-
-    def calculate_room_utilization(self):
-        # Instantiate the calculator
-        room_utilization_calculator = RoomUtilizationCalculator()
-        
-        # Define your date range for the calculation
-        start_date = datetime(2023, 1, 1)  # Example start date
-        end_date = datetime(2023, 12, 31)  # Example end date
-        
-        # Perform the calculation
-        self.room_utilization_efficiency = room_utilization_calculator.calculate_room_utilization_efficiency(start_date, end_date)
-        
-        # Use or store the calculated efficiencies as needed
-        # For example, printing them:
-        print("Room Utilization Efficiency:")
-        for room_id, efficiency in self.room_utilization_efficiency.items():
-            print(f"Room ID: {room_id}, Utilization Efficiency: {efficiency:.2f}%")
-
-    def calculate_operational_hours_per_room(self):
-        """
-        Calculates the operational hours for each room, considering various factors
-        such as regular operating hours, maintenance schedules, and special closures.
-        """
-        operational_hours_per_room = {}
-        for room in self.rooms:
-            if isinstance(room, dict) and 'room_id' in room and 'operating_hours' in room:
-                room_id = room['room_id']
-                operating_hours = room['operating_hours']  # A dictionary with days of the week and hours, e.g., {'Monday': [8, 16]}
-                maintenance_periods = room.get('maintenance_periods', [])  # List of periods when the room is unavailable
-                
-                # Calculate total operational hours by subtracting maintenance hours from regular operating hours
-                total_operational_hours = self.calculate_weekly_operational_hours(operating_hours) - self.calculate_maintenance_downtime(maintenance_periods)
-                
-                operational_hours_per_room[room_id] = max(0, total_operational_hours)  # Ensure non-negative values
-            else:
-                print(f"Invalid room data encountered: {room}")
-
-        return operational_hours_per_room
-
-    def calculate_weekly_operational_hours(self, operating_hours):
-        """
-        Calculates the total operational hours in a week based on a room's operating hours.
-        """
-        total_hours = 0
-        for day, hours in operating_hours.items():
-            # Assuming 'hours' is a list of opening and closing times
-            for start, end in hours:
-                total_hours += end - start
-        return total_hours
-
-    def calculate_maintenance_downtime(self, maintenance_periods):
-        """
-        Calculates the total downtime due to maintenance in a given period.
-        """
-        total_downtime = 0
-        for period in maintenance_periods:
-            start, end = period['start'], period['end']
-            # Assuming 'start' and 'end' are datetime objects
-            downtime = (end - start).total_seconds() / 3600  # Convert seconds to hours
-            total_downtime += downtime
-        return total_downtime
-
-    def calculate_used_hours_per_room(self):
-        """
-        Calculates the total used hours for each room based on surgeries.
-        """
-        total_used_hours_per_room = {}
-        for surgery in self.surgeries:
-            if 'room_id' in surgery and 'start_time' in surgery and 'end_time' in surgery:
-                room_id = surgery['room_id']
-                # Ensure that 'start_time' and 'end_time' are datetime objects for accurate calculation
-                if isinstance(surgery['start_time'], datetime) and isinstance(surgery['end_time'], datetime):
-                    duration_hours = (surgery['end_time'] - surgery['start_time']).total_seconds() / 3600
-                    if room_id in total_used_hours_per_room:
-                        total_used_hours_per_room[room_id] += duration_hours
-                    else:
-                        total_used_hours_per_room[room_id] = duration_hours
-            else:
-                print(f"Warning: Missing data in surgery {surgery}")
-
-        return total_used_hours_per_room
-
-    def evaluate_utilization_rate(self, utilization_rate):
-        """
-        Evaluates the efficiency of a utilization rate, potentially applying different metrics
-        or considerations specific to the application's operational goals.
-        """
-        # Example: Efficiency decreases as utilization rate exceeds a threshold due to over-utilization concerns
-        threshold = 0.75
-        if utilization_rate <= threshold:
-            return utilization_rate  # Directly use the rate as the efficiency score
-        else:
-            # Apply a penalty for exceeding the threshold to discourage over-utilization
-            return 1 - (utilization_rate - threshold)
-
-    def calculate_workload_balance(self):
-        # Instantiate the WorkloadBalanceCalculator
-        workload_calculator = WorkloadBalanceCalculator()
-        
-        # Perform the calculation
-        workload_balance_metric = workload_calculator.calculate_workload_balance()
-        
-        # You might want to store this metric in the instance for later use
-        return workload_balance_metric
-
-    # Existing methods...
-    def calculate_resource_utilization_efficiency(self):
+    def calculate_all_metrics(self):
+        print("Calculating all metrics...")
         if not self.start_date or not self.end_date:
-            raise ValueError("Start date and end date must be set before performing this calculation.")
+            print("Warning: Analysis period (start_date, end_date) not set. Metrics might be inaccurate.")
 
-    def calculate_preference_satisfaction(self, surgeries):
-        return self.preference_satisfaction_calculator.calculate_preference_satisfaction(surgeries)
+        # Fetch data if not already populated and db_session is available
+        if not self.surgeries and self.db_session: # Basic check, might need more robust logic
+            self.fetch_initial_data()
 
-# Example weights for each metric
-weight_workload_balance = 2.0
-weight_preference_satisfaction = 1.5
-weight_resource_utilization_efficiency = 2.0
-weight_equipment_utilization_efficiency = 1.0
-weight_surgeon_schedule_compactness = 1.5
-weight_operational_cost_minimization = 2.5
-weight_room_utilization_efficiency = 2.0
+        self._calculate_workload_balance()
+        self._calculate_preference_satisfaction()
+        self._calculate_resource_utilization_efficiency()
+        self._calculate_equipment_utilization_efficiency()
+        self._calculate_operational_cost_minimization()
+        self._calculate_room_utilization_efficiency()
+        self._calculate_surgeon_schedule_compactness()
 
-def calculate_score(self):
-    """Calculates the overall score of the solution based on various metrics."""
-    self.score = (
-        self.workload_balance * weight_workload_balance +
-        self.preference_satisfaction * weight_preference_satisfaction +
-        self.resource_utilization_efficiency * weight_resource_utilization_efficiency +
-        self.equipment_utilization_efficiency * weight_equipment_utilization_efficiency +
-        self.surgeon_schedule_compactness * weight_surgeon_schedule_compactness +
-        self.operational_cost_minimization * weight_operational_cost_minimization +
-        self.room_utilization_efficiency * weight_room_utilization_efficiency
+        print("Workload Balance:", self.workload_balance)
+        print("Preference Satisfaction:", self.preference_satisfaction)
+        print("Resource Utilization Efficiency:", self.resource_utilization_efficiency)
+        print("Equipment Utilization Efficiency:", self.equipment_utilization_efficiency)
+        print("Operational Cost Minimization (Avg Duration):", self.operational_cost_minimization)
+        print("Room Utilization Efficiency:", self.room_utilization_efficiency)
+        print("Surgeon Schedule Compactness:", self.surgeon_schedule_compactness)
+
+    def _get_all_surgeon_preferences(self):
+        """Helper to fetch/construct surgeon preferences map."""
+        prefs_map = {}
+        if self.db_session:
+            # Placeholder: Query SurgeonPreferenceModel
+            # for surgeon in self.surgeons:
+            #     pref = self.db_session.query(SurgeonPreferenceModel).filter_by(surgeon_id=surgeon.id).first()
+            #     prefs_map[surgeon.id] = pref.preferences if pref else {}
+            print("_get_all_surgeon_preferences: DB query not implemented.")
+            # Fallback for now if surgeons list is populated manually
+            for surgeon in self.surgeries: # Assuming surgeons are in self.surgeries for now
+                 if hasattr(surgeon, 'surgeon_id') and hasattr(surgeon, 'preferences'):
+                    prefs_map[surgeon.surgeon_id] = getattr(surgeon, 'preferences', {})
+        else: # No DB session, try to use manually populated self.surgeons if available
+             for surgeon in self.surgeons: # self.surgeons should be list of Surgeon objects
+                 if hasattr(surgeon, 'staff_id') and hasattr(surgeon, 'preferences'): # Check attributes of Surgeon model
+                    prefs_map[surgeon.staff_id] = getattr(surgeon, 'preferences', {})
+        return prefs_map
+
+    def get_surgeon_preferences(self, surgeon_id):
+        print(f"get_surgeon_preferences for {surgeon_id}: Placeholder for SQLAlchemy.")
+        if self.db_session:
+            # Example: preference = self.db_session.query(SurgeonPreferenceModel).filter_by(surgeon_id=surgeon_id).first()
+            # return preference.preferences if preference else {}
+            pass
+        return {}
+
+    def check_time_slot(self, surgery_id, proposed_start, proposed_end):
+        print(f"check_time_slot for surgery {surgery_id}: Placeholder logic.")
+        # This method would involve checking surgeon, room, and equipment availability
+        # using self.db_session for queries or in-memory data if db_session is not used.
+        # Example for surgeon availability (conceptual):
+        # surgery_details = self.db_session.query(SurgeryModel).get(surgery_id)
+        # if not is_surgeon_available(self.db_session, surgery_details.surgeon_id, proposed_start, proposed_end):
+        #     return False
+        return True # Placeholder: always available
+
+    def get_dynamic_room_availability(self):
+        room_availability = {}
+        if self.db_session:
+            # Placeholder: rooms_data = self.db_session.query(RoomModel).all()
+            print("get_dynamic_room_availability: DB query for rooms not implemented.")
+            rooms_data = list(self.rooms.values()) # Fallback to in-memory if populated
+        else:
+            rooms_data = list(self.rooms.values())
+
+        for room in rooms_data: # Assuming room is an object with attributes
+            room_id = getattr(room, 'room_id', None)
+            if not room_id: continue
+
+            default_hours = getattr(room, 'default_available_hours', 0)
+            maintenance_periods = getattr(room, 'maintenance_periods', [])
+
+            maintenance_deduction = 0
+            for maint in maintenance_periods:
+                # Assuming maint is a dict {'start': datetime, 'end': datetime}
+                m_start, m_end = maint.get('start'), maint.get('end')
+                if m_start and m_end and isinstance(m_start, datetime) and isinstance(m_end, datetime):
+                    maintenance_deduction += (m_end - m_start).total_seconds() / 3600
+
+            room_availability[room_id] = max(0, default_hours - maintenance_deduction)
+        return room_availability
+
+# Main execution / example usage
+if __name__ == '__main__':
+    print("Running Solution example...")
+    # Conceptual: Initialize with a SQLAlchemy session if using a database
+    # from sqlalchemy import create_engine
+    # from sqlalchemy.orm import sessionmaker
+    # SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://user:pass@host/db"
+    # engine = create_engine(SQLALCHEMY_DATABASE_URL)
+    # SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    # db_session_instance = SessionLocal()
+    # solution_instance = Solution(db_session=db_session_instance)
+
+    # For demonstration without a live DB session:
+    solution_instance = Solution()
+
+    # Set analysis period
+    solution_instance.set_analysis_period(
+        start_date=datetime(2023, 1, 1),
+        end_date=datetime(2023, 12, 31)
     )
-    return self.score
 
-from datetime import datetime
-from solution import Solution
+    # Populate with some mock data if not using DB
+    # This would typically come from fetch_initial_data() if db_session was real
+    from models import Surgery # Assuming Surgery model exists
+    solution_instance.surgeries = [
+        Surgery(surgery_id='S001', surgeon_id='DR01', duration=120, start_time='2023-10-10T09:00:00', end_time='2023-10-10T11:00:00', room_id='R1', preferences={'day_off': 'Monday'}),
+        Surgery(surgery_id='S002', surgeon_id='DR02', duration=90, start_time='2023-10-10T11:30:00', end_time='2023-10-10T13:00:00', room_id='R2', preferences={}),
+        Surgery(surgery_id='S003', surgeon_id='DR01', duration=150, start_time='2023-10-11T14:00:00', end_time='2023-10-11T16:30:00', room_id='R1', preferences={})
+    ]
+    # Populate other data like self.rooms, self.equipment, self.surgeons, self.room_assignments similarly for full testing
+    from models import OperatingRoom
+    solution_instance.rooms = {
+        'R1': OperatingRoom(room_id='R1', name='Room 1', default_available_hours=8*5, maintenance_periods=[]),
+        'R2': OperatingRoom(room_id='R2', name='Room 2', default_available_hours=8*5, maintenance_periods=[])
+    }
+    solution_instance.room_assignments = [
+        {'surgery_id': 'S001', 'room_id': 'R1', 'start_time': '2023-10-10T09:00:00', 'end_time': '2023-10-10T11:00:00'},
+        {'surgery_id': 'S002', 'room_id': 'R2', 'start_time': '2023-10-10T11:30:00', 'end_time': '2023-10-10T13:00:00'},
+        {'surgery_id': 'S003', 'room_id': 'R1', 'start_time': '2023-10-11T14:00:00', 'end_time': '2023-10-11T16:30:00'}
+    ]
 
-# Initialize the Solution instance
-solution_instance = Solution()
+    # Calculate all metrics
+    solution_instance.calculate_all_metrics()
 
-# Optionally, if your design includes setting an analysis period:
-solution_instance.set_analysis_period(
-    start_date=datetime(2023, 1, 1),
-    end_date=datetime(2023, 12, 31)
-)
+    # Calculate overall score
+    final_score = solution_instance.calculate_score()
+    print(f"Final Solution Score: {final_score}")
 
-# Calculate all metrics
-solution_instance.calculate_all_metrics()
-
-# Access and print some calculated metrics for verification
-print(f"Equipment Utilization Efficiency: {solution_instance.equipment_utilization_efficiency}")
-print(f"Operational Cost Minimization: {solution_instance.operational_cost_minimization}")
-print(f"Room Utilization Efficiency: {solution_instance.room_utilization_efficiency}")
-print(f"Workload Balance: {solution_instance.workload_balance}")
+    # if db_session_instance: db_session_instance.close()

@@ -1,70 +1,90 @@
 # surgery_staff_assignment_service.py
 
-from pymongo.errors import PyMongoError
-# Import the necessary class from models.py
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from db_config import db
+"""Service layer for managing surgery staff assignments in the surgical scheduling system."""
+
+from sqlalchemy.exc import SQLAlchemyError
 from models import SurgeryStaffAssignment
 
 
 class SurgeryStaffAssignmentService:
+    """Provides services for managing surgery staff assignments."""
+
     @staticmethod
-    def create_surgery_staff_assignment(assignment_data):
+    def create_surgery_staff_assignment(db, assignment_data):  # Added db parameter
         """Creates a new surgery staff assignment."""
         try:
-            document = assignment_data.to_document()
-            db.surgery_staff_assignments.insert_one(document)
-            print(f"Surgery staff assignment {document['assignment_id']} created successfully.")
-        except PyMongoError as e:
+            new_assignment = SurgeryStaffAssignment(
+                surgery_id=assignment_data["surgery_id"],
+                staff_id=assignment_data["staff_id"],
+                role=assignment_data["role"],
+            )
+            db.add(new_assignment)
+            db.commit()
+            db.refresh(new_assignment)  # Kept db.refresh()
+            print(
+                f"Surgery staff assignment {new_assignment.assignment_id} created successfully."
+            )
+            return new_assignment.assignment_id
+        except SQLAlchemyError as e:
+            db.rollback()
             print(f"Error creating surgery staff assignment: {e}")
+            return None
 
     @staticmethod
-    def update_surgery_staff_assignment(assignment_id, update_fields):
+    def get_surgery_staff_assignment(db, assignment_id):  # Added db parameter
+        """Fetches a surgery staff assignment by its ID."""
+        try:
+            assignment = (
+                db.query(SurgeryStaffAssignment)
+                .filter_by(assignment_id=assignment_id)
+                .first()
+            )
+            if assignment:
+                return assignment
+            print("Surgery staff assignment not found.")
+            return None
+        except SQLAlchemyError as e:
+            print(f"Error fetching surgery staff assignment: {e}")
+            return None
+
+    @staticmethod
+    def update_surgery_staff_assignment(
+        db, assignment_id, update_fields
+    ):  # Added db parameter
         """Updates an existing surgery staff assignment."""
         try:
-            result = db.surgery_staff_assignments.update_one(
-                {"assignment_id": assignment_id},
-                {"$set": update_fields}
+            result = (
+                db.query(SurgeryStaffAssignment)
+                .filter_by(assignment_id=assignment_id)
+                .update(update_fields)
             )
-            if result.modified_count:
+            db.commit()
+            if result:
                 print(f"Surgery staff assignment {assignment_id} updated successfully.")
-            else:
-                print(f"No changes made to surgery staff assignment {assignment_id}.")
-        except PyMongoError as e:
+                return True
+            print(f"No changes made to surgery staff assignment {assignment_id}.")
+            return False
+        except SQLAlchemyError as e:
+            db.rollback()
             print(f"Error updating surgery staff assignment: {e}")
+            return False
 
     @staticmethod
-    def delete_surgery_staff_assignment(assignment_id):
+    def delete_surgery_staff_assignment(db, assignment_id):  # Added db parameter
         """Deletes a surgery staff assignment."""
         try:
-            result = db.surgery_staff_assignments.delete_one({"assignment_id": assignment_id})
-            if result.deleted_count:
+            result = (
+                db.query(SurgeryStaffAssignment)
+                .filter_by(assignment_id=assignment_id)
+                .delete()
+            )
+            db.commit()
+            if result:
                 print(f"Surgery staff assignment {assignment_id} deleted successfully.")
-            else:
-                print(f"Surgery staff assignment {assignment_id} not found.")
-        except PyMongoError as e:
+                return True
+            print(f"Surgery staff assignment {assignment_id} not found.")
+            return False
+        except SQLAlchemyError as e:
+            db.rollback()
             print(f"Error deleting surgery staff assignment: {e}")
-
-    @staticmethod
-    def get_surgery_staff_assignment_by_id(assignment_id):
-        try:
-            document = db.surgery_staff_assignments.find_one({"assignment_id": assignment_id})
-            return SurgeryStaffAssignment.from_document(document) if document else None
-        except PyMongoError as e:
-            print(f"Error retrieving surgery staff assignment: {e}")
-
-# Example usage
-if __name__ == "__main__":
-    # Example surgery staff assignment data
-    new_assignment = SurgeryStaffAssignment("ASSIGN001", "SURG001", "STAFF001", "Lead Surgeon")
-    
-    # Create a new assignment
-    SurgeryStaffAssignmentService.create_surgery_staff_assignment(new_assignment)
-    
-    # Update an existing assignment
-    SurgeryStaffAssignmentService.update_surgery_staff_assignment("ASSIGN001", {"role": "Assistant Surgeon"})
-    
-    # Delete an assignment
-    SurgeryStaffAssignmentService.delete_surgery_staff_assignment("ASSIGN001")
+            return False

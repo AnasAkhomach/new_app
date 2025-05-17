@@ -1,345 +1,241 @@
-import datetime
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Date,
+    DateTime,
+    Boolean,
+    Text,
+    ForeignKey,
+    Enum as GenericEnum,  # Changed from MySQLEnum
+)
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm import declarative_base
 
-class OperatingRoom:
-    def __init__(self, room_id, location, equipment_list):
-        self.room_id = room_id
-        self.location = location
-        self.equipment_list = equipment_list
-
-    @staticmethod
-    def from_document(document):
-        """Converts a MongoDB document into an OperatingRoom instance."""
-        return OperatingRoom(
-            room_id=document.get("room_id"),
-            location=document.get("location"),
-            equipment_list=document.get("equipment_list", [])
-        )
-
-    def to_document(self):
-        """Converts the OperatingRoom instance into a dictionary suitable for MongoDB."""
-        return {
-            "room_id": self.room_id,
-            "location": self.location,
-            "equipment_list": self.equipment_list
-        }
-
-class Patient:
-    def __init__(self, patient_id, name, dob, contact_info, medical_history, privacy_consent):
-        self.patient_id = patient_id
-        self.name = name
-        self.dob = dob
-        self.contact_info = contact_info
-        self.medical_history = medical_history
-        self.privacy_consent = privacy_consent
-
-    @staticmethod
-    def from_document(document):
-        """Converts a MongoDB document into a Patient instance."""
-        return Patient(
-            patient_id=document.get("patient_id"),
-            name=document.get("name"),
-            dob=document.get("dob"),
-            contact_info=document.get("contact_info"),
-            medical_history=document.get("medical_history"),
-            privacy_consent=document.get("privacy_consent")
-        )
-
-    def to_document(self):
-        """Converts instance into a dictionary suitable for MongoDB."""
-        return {
-            "patient_id": self.patient_id,
-            "name": self.name,
-            "dob": self.dob,
-            "contact_info": self.contact_info,
-            "medical_history": self.medical_history,
-            "privacy_consent": self.privacy_consent
-        }
-
-class Staff:
-    def __init__(self, staff_id, name, role, contact_info, specialization=None, availability=None):
-        self.staff_id = staff_id
-        self.name = name
-        self.role = role
-        self.contact_info = contact_info
-        self.specialization = specialization
-        self.availability = availability
-
-    @staticmethod
-    def from_document(document):
-        """Converts a MongoDB document into a Staff instance."""
-        return Staff(
-            staff_id=document.get("staff_id"),
-            name=document.get("name"),
-            role=document.get("role"),
-            contact_info=document.get("contact_info"),
-            specialization=document.get("specialization", None),
-            availability=document.get("availability", None)
-        )
-
-    def to_document(self):
-        """Converts instance into a dictionary suitable for MongoDB."""
-        document = {
-            "staff_id": self.staff_id,
-            "name": self.name,
-            "role": self.role,
-            "contact_info": self.contact_info,
-            "specialization": self.specialization,
-            "availability": self.availability
-        }
-        return document
-
-class Surgeon:
-    def __init__(self, surgeon_id, name, contact_info, specialization, credentials, availability, surgeon_preferences=None):
-        self.surgeon_id = surgeon_id
-        self.name = name
-        self.contact_info = contact_info
-        self.specialization = specialization
-        self.credentials = credentials
-        self.availability = availability
-        self.surgeon_preferences = surgeon_preferences or {}
-
-    @staticmethod
-    def from_document(document):
-        return Surgeon(
-            surgeon_id=document.get("surgeon_id"),
-            name=document.get("name"),
-            contact_info=document.get("contact_info"),
-            specialization=document.get("specialization"),
-            credentials=document.get("credentials"),
-            availability=document.get("availability"),
-            surgeon_preferences=document.get("surgeon_preferences", {})
-        )
-
-    def to_document(self):
-        document = {
-            "surgeon_id": self.surgeon_id,
-            "name": self.name,
-            "contact_info": self.contact_info,
-            "specialization": self.specialization,
-            "credentials": self.credentials,
-            "availability": self.availability,
-            "surgeon_preferences": self.surgeon_preferences
-        }
-        return document
-
-class Surgery:
-    def __init__(self, surgery_id, patient_id, surgeon_id, room_id, scheduled_date, surgery_type, urgency_level, duration, status, start_time, end_time, required_equipment_ids):
-        self.surgery_id = surgery_id
-        self.patient_id = patient_id
-        self.surgeon_id = surgeon_id
-        self.room_id = room_id
-        self.scheduled_date = scheduled_date
-        self.surgery_type = surgery_type
-        self.urgency_level = urgency_level
-        self.duration = duration
-        self.status = status
-        self.start_time = start_time
-        self.end_time = end_time
-        self.required_equipment_ids = required_equipment_ids
-
-    @staticmethod
-    def from_document(document):
-        """Creates a Surgery instance from a MongoDB document."""
-        return Surgery(
-            surgery_id=document.get("surgery_id"),
-            patient_id=document.get("patient_id"),
-            surgeon_id=document.get("surgeon_id"),
-            room_id=document.get("room_id"),
-            scheduled_date=document.get("scheduled_date"),
-            surgery_type=document.get("surgery_type"),
-            urgency_level=document.get("urgency_level"),
-            duration=document.get("duration"),
-            status=document.get("status"),
-            start_time=document.get("start_time"),
-            end_time=document.get("end_time"),
-            required_equipment_ids=document.get("required_equipment_ids", [])
-        )
-
-    def to_document(self):
-        """Converts the Surgery instance into a MongoDB document."""
-        return {
-            "surgery_id": self.surgery_id,
-            "patient_id": self.patient_id,
-            "surgeon_id": self.surgeon_id,
-            "room_id": self.room_id,
-            "scheduled_date": self.scheduled_date,
-            "surgery_type": self.surgery_type,
-            "urgency_level": self.urgency_level,
-            "duration": self.duration,
-            "status": self.status,
-            "start_time": self.start_time,
-            "end_time": self.end_time,
-            "required_equipment_ids": self.required_equipment_ids,
-        }
+Base = declarative_base()
 
 
-# NOT FINISED YET NEEDS TO Obtain token.json
-
-class SurgeryEquipment:
-    def __init__(self, equipment_id, name, type, availability):
-        self.equipment_id = equipment_id
-        self.name = name
-        self.type = type
-        self.availability = availability
-
-    @staticmethod
-    def from_document(document):
-        """Creates a SurgeryEquipment instance from a MongoDB document."""
-        return SurgeryEquipment(
-            equipment_id=document.get("equipment_id"),
-            name=document.get("name"),
-            type=document.get("type"),
-            availability=document.get("availability"),
-        )
-
-    def to_document(self):
-        """Converts a SurgeryEquipment instance into a MongoDB document."""
-        return {
-            "equipment_id": self.equipment_id,
-            "name": self.name,
-            "type": self.type,
-            "availability": self.availability,
-        }
-
-class SurgeryEquipmentUsage:
-    def __init__(self, usage_id, surgery_id, equipment_id):
-        self.usage_id = usage_id
-        self.surgery_id = surgery_id
-        self.equipment_id = equipment_id
-
-    @staticmethod
-    def from_document(document):
-        """Creates a SurgeryEquipmentUsage instance from a MongoDB document."""
-        return SurgeryEquipmentUsage(
-            usage_id=document.get("usage_id"),
-            surgery_id=document.get("surgery_id"),
-            equipment_id=document.get("equipment_id"),
-        )
-
-    def to_document(self):
-        """Converts a SurgeryEquipmentUsage instance into a MongoDB document."""
-        return {
-            "usage_id": self.usage_id,
-            "surgery_id": self.surgery_id,
-            "equipment_id": self.equipment_id,
-        }
-
-class SurgeryRoomAssignment:
-    def __init__(self, assignment_id, surgery_id, room_id, start_time, end_time):
-        self.assignment_id = assignment_id
-        self.surgery_id = surgery_id
-        self.room_id = room_id
-        self.start_time = start_time
-        self.end_time = end_time
-
-    @staticmethod
-    def from_document(document):
-        """Creates a SurgeryRoomAssignment instance from a MongoDB document."""
-        return SurgeryRoomAssignment(
-            assignment_id=document.get("assignment_id"),
-            surgery_id=document.get("surgery_id"),
-            room_id=document.get("room_id"),
-            start_time=document.get("start_time"),
-            end_time=document.get("end_time"),
-        )
-
-    def to_document(self):
-        """Converts a SurgeryRoomAssignment instance into a MongoDB document."""
-        return {
-            "assignment_id": self.assignment_id,
-            "surgery_id": self.surgery_id,
-            "room_id": self.room_id,
-            "start_time": self.start_time,
-            "end_time": self.end_time,
-        }
-
-class StaffAssignment:
-    def __init__(self, staff_id, role, assignment_id=None):
-        self.assignment_id = assignment_id  # Optional, depending on if you're tracking assignments separately
-        self.staff_id = staff_id
-        self.role = role
-
-    @staticmethod
-    def from_document(document):
-        """Converts a MongoDB document to a StaffAssignment instance."""
-        return StaffAssignment(
-            assignment_id=document.get("assignment_id"),
-            staff_id=document.get("staff_id"),
-            role=document.get("role")
-        )
-
-    def to_document(self):
-        """Converts the StaffAssignment instance into a MongoDB document."""
-        return {
-            "assignment_id": self.assignment_id,
-            "staff_id": self.staff_id,
-            "role": self.role
-        }
-    
-class SurgeryStaffAssignment:
-    def __init__(self, assignment_id, surgery_id, staff_id, role):
-        self.assignment_id = assignment_id
-        self.surgery_id = surgery_id
-        self.staff_id = staff_id
-        self.role = role
-
-    def to_document(self):
-        """
-        Converts the SurgeryStaffAssignment instance into a dictionary suitable for MongoDB.
-        This method is crucial for creating and updating MongoDB documents based on the object's current state.
-        """
-        return {
-            "assignment_id": self.assignment_id,
-            "surgery_id": self.surgery_id,
-            "staff_id": self.staff_id,
-            "role": self.role
-        }
-
-    @staticmethod
-    def from_document(document):
-        """
-        Static method to create an instance of SurgeryStaffAssignment from a MongoDB document.
-        This method facilitates the conversion from database records back into Python objects.
-        """
-        return SurgeryStaffAssignment(
-            assignment_id=document.get("assignment_id"),
-            surgery_id=document.get("surgery_id"),
-            staff_id=document.get("staff_id"),
-            role=document.get("role")
-        )
-
-class SurgeryAppointment:
-    def __init__(self, appointment_id, surgery_id, patient_id, staff_assignments, room_id, start_time, end_time):
-        self.appointment_id = appointment_id
-        self.surgery_id = surgery_id
-        self.patient_id = patient_id
-        self.room_id = room_id
-        self.start_time = start_time
-        self.end_time = end_time
-        self.staff_assignments = [StaffAssignment(**sa) if isinstance(sa, dict) else sa for sa in staff_assignments]
+class OperatingRoom(Base):
+    __tablename__ = "operatingroom"
+    room_id = Column(Integer, primary_key=True, autoincrement=True)
+    location = Column(String(255), nullable=False)
+    surgeries = relationship("Surgery", back_populates="room")
+    equipment = relationship("OperatingRoomEquipment", back_populates="room")
 
 
-    @staticmethod
-    def from_document(document):
-        staff_assignments = [StaffAssignment(sa["staff_id"], sa["role"]) for sa in document["staff_assignments"]]
-        return SurgeryAppointment(
-            document["appointment_id"],
-            document["surgery_id"],
-            document["patient_id"],
-            staff_assignments,
-            document["room_id"],
-            document["start_time"],
-            document["end_time"]
-        )
- 
-    def to_document(self):
-        """Converts the SurgeryAppointment instance into a dictionary suitable for MongoDB."""
-        return {
-            "appointment_id": self.appointment_id,
-            "surgery_id": self.surgery_id,
-            "patient_id": self.patient_id,
-            "staff_assignments": [{"staff_id": sa.staff_id, "role": sa.role} for sa in self.staff_assignments],
-            "room_id": self.room_id,
-            "start_time": self.start_time,
-            "end_time": self.end_time
-        }
+class Patient(Base):
+    __tablename__ = "patient"
+    patient_id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    dob = Column(Date, nullable=False)
+    contact_info = Column(String(255), nullable=True)
+    privacy_consent = Column(Boolean, nullable=False, server_default="0")
+    surgeries = relationship("Surgery", back_populates="patient")
+    appointments = relationship("SurgeryAppointment", back_populates="patient")
+    medical_history = relationship("PatientMedicalHistory", back_populates="patient")
+
+
+class Staff(Base):
+    __tablename__ = "staff"
+    staff_id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    role = Column(String(100), nullable=False)
+    contact_info = Column(String(255), nullable=True)
+    specialization = Column(String(255), nullable=True)
+    availability = Column(Boolean, nullable=False, server_default="1")
+    assignments = relationship("SurgeryStaffAssignment", back_populates="staff")
+
+
+class Surgeon(Base):
+    __tablename__ = "surgeon"
+    surgeon_id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    contact_info = Column(String(255), nullable=True)
+    specialization = Column(String(255), nullable=False)
+    credentials = Column(Text, nullable=False)
+    availability = Column(Boolean, nullable=False, server_default="1")
+    surgeries = relationship("Surgery", back_populates="surgeon")
+    appointments = relationship("SurgeryAppointment", back_populates="surgeon")
+    preferences = relationship("SurgeonPreference", back_populates="surgeon")
+
+
+class SurgeryEquipment(Base):
+    __tablename__ = "surgeryequipment"
+    equipment_id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    type = Column(String(100), nullable=False)
+    availability = Column(Boolean, nullable=False, server_default="1")
+    usages = relationship("SurgeryEquipmentUsage", back_populates="equipment")
+
+
+class Surgery(Base):
+    __tablename__ = "surgery"
+    surgery_id = Column(Integer, primary_key=True, autoincrement=True)
+    scheduled_date = Column(DateTime, nullable=False)
+    surgery_type = Column(String(100), nullable=False)
+    # Changed MySQLEnum to GenericEnum with native_enum=False
+    urgency_level = Column(
+        GenericEnum(
+            "Low", "Medium", "High", name="urgency_level_enum", native_enum=False
+        ),
+        nullable=False,
+    )
+    duration_minutes = Column(Integer, nullable=False)
+    # Changed MySQLEnum to GenericEnum with native_enum=False
+    status = Column(
+        GenericEnum(
+            "Scheduled",
+            "In Progress",
+            "Completed",
+            "Cancelled",
+            name="surgery_status_enum",
+            native_enum=False,
+        ),
+        nullable=False,
+        server_default="Scheduled",
+    )
+    start_time = Column(DateTime, nullable=True)
+    end_time = Column(DateTime, nullable=True)
+    patient_id = Column(
+        Integer,
+        ForeignKey("patient.patient_id", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True,
+    )
+    surgeon_id = Column(
+        Integer,
+        ForeignKey("surgeon.surgeon_id", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True,
+    )
+    room_id = Column(
+        Integer,
+        ForeignKey("operatingroom.room_id", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=True,
+    )
+    patient = relationship("Patient", back_populates="surgeries")
+    surgeon = relationship("Surgeon", back_populates="surgeries")
+    room = relationship("OperatingRoom", back_populates="surgeries")
+    equipment_usages = relationship("SurgeryEquipmentUsage", back_populates="surgery")
+    staff_assignments = relationship("SurgeryStaffAssignment", back_populates="surgery")
+
+
+class OperatingRoomEquipment(Base):
+    __tablename__ = "operatingroomequipment"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    room_id = Column(
+        Integer,
+        ForeignKey("operatingroom.room_id", ondelete="CASCADE", onupdate="CASCADE"),
+    )
+    equipment_name = Column(String(255), nullable=False)
+    room = relationship("OperatingRoom", back_populates="equipment")
+
+
+class PatientMedicalHistory(Base):
+    __tablename__ = "patientmedicalhistory"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    patient_id = Column(
+        Integer,
+        ForeignKey("patient.patient_id", ondelete="CASCADE", onupdate="CASCADE"),
+    )
+    medical_condition = Column(String(255), nullable=False)
+    diagnosis_date = Column(Date, nullable=False)
+    patient = relationship("Patient", back_populates="medical_history")
+
+
+class SurgeryEquipmentUsage(Base):
+    __tablename__ = "surgeryequipmentusage"
+    usage_id = Column(Integer, primary_key=True, autoincrement=True)
+    surgery_id = Column(
+        Integer,
+        ForeignKey("surgery.surgery_id", ondelete="CASCADE", onupdate="CASCADE"),
+    )
+    equipment_id = Column(
+        Integer,
+        ForeignKey(
+            "surgeryequipment.equipment_id", ondelete="RESTRICT", onupdate="CASCADE"
+        ),
+    )
+    usage_start_time = Column(DateTime, nullable=True)  # Added this line
+    usage_end_time = Column(DateTime, nullable=True)  # Added this line
+    surgery = relationship("Surgery", back_populates="equipment_usages")
+    equipment = relationship("SurgeryEquipment", back_populates="usages")
+
+
+class SurgeryStaffAssignment(Base):
+    __tablename__ = "surgerystaffassignment"
+    assignment_id = Column(Integer, primary_key=True, autoincrement=True)
+    surgery_id = Column(
+        Integer,
+        ForeignKey("surgery.surgery_id", ondelete="CASCADE", onupdate="CASCADE"),
+    )
+    staff_id = Column(
+        Integer, ForeignKey("staff.staff_id", ondelete="RESTRICT", onupdate="CASCADE")
+    )
+    role = Column(String(100), nullable=False)
+    surgery = relationship("Surgery", back_populates="staff_assignments")
+    staff = relationship("Staff", back_populates="assignments")
+
+
+class SurgeryAppointment(Base):
+    __tablename__ = "surgeryappointment"
+    appointment_id = Column(Integer, primary_key=True, autoincrement=True)
+    patient_id = Column(
+        Integer,
+        ForeignKey("patient.patient_id", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+    )
+    surgeon_id = Column(
+        Integer,
+        ForeignKey("surgeon.surgeon_id", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+    )
+    room_id = Column(
+        Integer,
+        ForeignKey("operatingroom.room_id", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+    )
+    appointment_date = Column(DateTime, nullable=False)
+    # Changed MySQLEnum to GenericEnum with native_enum=False
+    status = Column(
+        GenericEnum(
+            "Scheduled",
+            "Completed",
+            "Cancelled",
+            name="appointment_status_enum",
+            native_enum=False,
+        ),
+        nullable=False,
+        server_default="Scheduled",
+    )
+    notes = Column(Text, nullable=True)
+    patient = relationship("Patient", back_populates="appointments")
+    surgeon = relationship("Surgeon", back_populates="appointments")
+    room = relationship("OperatingRoom")
+
+
+class SurgeonPreference(Base):
+    __tablename__ = "surgeonpreference"
+    preference_id = Column(Integer, primary_key=True, autoincrement=True)
+    surgeon_id = Column(
+        Integer,
+        ForeignKey("surgeon.surgeon_id", ondelete="CASCADE", onupdate="CASCADE"),
+    )
+    preference_type = Column(String(100), nullable=False)
+    preference_value = Column(String(255), nullable=False)
+    surgeon = relationship("Surgeon", back_populates="preferences")
+
+
+class SurgeryRoomAssignment(Base):
+    __tablename__ = "surgeryroomassignment"
+    assignment_id = Column(Integer, primary_key=True, autoincrement=True)
+    surgery_id = Column(
+        Integer,
+        ForeignKey("surgery.surgery_id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
+    )
+    room_id = Column(
+        Integer,
+        ForeignKey("operatingroom.room_id", ondelete="RESTRICT", onupdate="CASCADE"),
+        nullable=False,
+    )
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)

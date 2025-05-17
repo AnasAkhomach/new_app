@@ -1,85 +1,74 @@
-# staff_service.py
+"""Service layer for managing staff in the surgical scheduling system."""
 
-from pymongo.errors import PyMongoError
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from db_config import db
+from sqlalchemy.exc import SQLAlchemyError
 from models import Staff
 
+
 class StaffService:
-    @staticmethod
-    def create_staff(staff_data):
-        """Creates a new staff record."""
-        try:
-            document = staff_data.to_document()
-            db.staff.insert_one(document)
-            print(f"Staff {document['name']} created successfully.")
-        except PyMongoError as e:
-            print(f"Error creating staff: {e}")
+    """Provides services for managing staff."""
 
     @staticmethod
-    def get_staff(staff_id):
+    def create_staff(db, staff_data):  # Added db parameter
+        """Creates a new staff record."""
+        try:
+            new_staff = Staff(
+                name=staff_data["name"],
+                role=staff_data["role"],
+                contact_info=staff_data.get("contact_info"),
+                specialization=staff_data.get("specialization"),
+                availability=staff_data.get("availability", True),
+            )
+            db.add(new_staff)
+            db.commit()
+            db.refresh(new_staff)  # Added refresh
+            print(f"Staff {new_staff.name} created successfully.")
+            return new_staff.staff_id  # Added return ID
+        except SQLAlchemyError as e:
+            db.rollback()
+            print(f"Error creating staff: {e}")
+            return None  # Added return None on error
+
+    @staticmethod
+    def get_staff(db, staff_id):  # Added db parameter
         """Retrieves a staff by staff_id and returns a Staff instance."""
         try:
-            document = db.staff.find_one({"staff_id": staff_id})
-            if document:
-                return Staff.from_document(document)
-            else:
-                print(f"No staff found with ID {staff_id}")
-                return None
-        except PyMongoError as e:
+            staff = db.query(Staff).filter_by(staff_id=staff_id).first()
+            if staff:
+                return staff
+            print(f"No staff found with ID {staff_id}")
+            return None
+        except SQLAlchemyError as e:
             print(f"Error retrieving staff: {e}")
             return None
 
     @staticmethod
-    def update_staff(staff_id, update_fields):
+    def update_staff(db, staff_id, update_fields):  # Added db parameter
         """Updates an existing staff record."""
         try:
-            db.staff.update_one({"staff_id": staff_id}, {"$set": update_fields})
-            print(f"Staff {staff_id} updated successfully.")
-        except PyMongoError as e:
+            result = db.query(Staff).filter_by(staff_id=staff_id).update(update_fields)
+            db.commit()
+            if result:
+                print(f"Staff {staff_id} updated successfully.")
+                return True  # Added return True
+            print(f"No staff found with ID {staff_id} or no new data to update.")
+            return False  # Added return False
+        except SQLAlchemyError as e:
+            db.rollback()
             print(f"Error updating staff: {e}")
+            return False  # Added return False on error
 
     @staticmethod
-    def delete_staff(staff_id):
+    def delete_staff(db, staff_id):  # Added db parameter
         """Deletes a staff record."""
         try:
-            db.staff.delete_one({"staff_id": staff_id})
-            print(f"Staff {staff_id} deleted successfully.")
-        except PyMongoError as e:
-            print(f"Error deleting staff: {e}")
-
-# Example usage
-if __name__ == "__main__":
-    try:
-        new_staff = Staff("STAFF001", "John Doe", "Nurse", "contact@example.com", "Cardiology", [("2023-01-01", "2023-12-31")])
-        StaffService.create_staff(new_staff)
-    except Exception as e:
-        print(f"An error occurred: {e}")
-    @staticmethod
-    def delete_staff(staff_id):
-        """Deletes a staff record."""
-        try:
-            result = db.staff.delete_one({"staff_id": staff_id})
-            if result.deleted_count:
+            result = db.query(Staff).filter_by(staff_id=staff_id).delete()
+            db.commit()
+            if result:
                 print(f"Staff {staff_id} deleted successfully.")
-            else:
-                print(f"Staff {staff_id} not found.")
-        except PyMongoError as e:
+                return True  # Added return True
+            print(f"No staff found with ID {staff_id}.")
+            return False  # Added return False
+        except SQLAlchemyError as e:
+            db.rollback()
             print(f"Error deleting staff: {e}")
-
-# Example usage
-if __name__ == "__main__":
-    # Example staff data initialization
-    #new_staff = Staff("STAFF004", "Jane Doe", "Nurse", "jane.doe@example.com", None, None)
-    new_staff = Staff("STAFF004", "Jane Doe", "Nurse", "jane.doe@example.com")
-
-    # Create a new staff record
-    StaffService.create_staff(new_staff)
-    
-    # Update an existing staff record
-    StaffService.update_staff("STAFF004", {"role": "Senior Nurse"})
-    
-    # Delete a staff record
-    StaffService.delete_staff("STAFF004")
+            return False  # Added return False on error

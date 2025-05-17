@@ -57,7 +57,7 @@ This system considers crucial factors such as operating room availability, equip
 * **Algorithm:** Tabu Search
 * **Libraries:**
 
-  * `pymongo`
+  * `Flask`
   * `google-api-python-client`, `google-auth-httplib2`, `google-auth-oauthlib`
   * `python-dotenv`
   * `requests`

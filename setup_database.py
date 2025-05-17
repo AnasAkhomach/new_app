@@ -1,55 +1,60 @@
-from mongodb_transaction_manager import MongoDBClient
-from pymongo.errors import OperationFailure
+from sqlalchemy import inspect
+from db_config import engine, Base
 import logging
-from manage_duplicates import find_and_handle_all_duplicates
+from models import *  # Import all models
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def create_indexes(db):
-    db = MongoDBClient.get_db()  # Access the database using the MongoDBClient
-    
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import OperationalError
+from db_config import DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, engine as default_engine # Renamed to avoid conflict
+
+def setup_database():
+    # Connect to MySQL server (without specifying a database initially)
+    server_engine_url = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}"
+    server_engine = create_engine(server_engine_url)
+
     try:
-        # Example: Ensure a unique index for Operating Rooms by Room ID, created in the background
-        db.operating_rooms.create_index([("room_id", 1)], unique=True, background=True)
-        logger.info("Unique index on room_id in operating_rooms ensured.")
+        with server_engine.connect() as connection:
+            connection.execute(text(f"CREATE DATABASE IF NOT EXISTS {DB_NAME}"))
+            connection.commit() # Ensure the CREATE DATABASE command is committed
+            logger.info(f"Database '{DB_NAME}' ensured to exist.")
+    except OperationalError as e:
+        logger.error(f"Could not connect to MySQL server or create database: {e}")
+        return # Exit if database cannot be created or server not reachable
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during database creation: {e}")
+        return
 
-        # Composite index for Surgery Appointments by Start and End Times, created in the background
-        db.surgery_appointments.create_index([("start_time", 1), ("end_time", 1)], background=True)
-        logger.info("Composite index on start_time and end_time in surgery_appointments ensured.")
+    # Now connect to the specific database (engine from db_config.py should now work)
+    # Re-assign engine to the one from db_config which points to the specific database
+    # No, default_engine is already configured to the specific database. If it failed before, it was due to DB not existing.
+    # We just need to ensure tables are created using this default_engine.
+    try:
+        inspector = inspect(default_engine) # Use the engine from db_config (now aliased)
 
-        # Index for Staff Assignments in the Staff Collection, created in the background
-        db.staff.create_index([("staff_assignments.staff_id", 1)], background=True)
-        logger.info("Index on staff_assignments.staff_id in staff collection ensured.")
+        # Create all tables defined in the models if they don't exist
+        if not inspector.get_table_names():
+            logger.info("Creating database tables based on SQLAlchemy models...")
+            Base.metadata.create_all(default_engine) # Use the engine from db_config
+            logger.info("Database tables created successfully.")
+        else:
+            logger.info("Database tables already exist.")
 
-        # Unique index for Equipment by Equipment ID, created in the background
-        db.surgery_equipment.create_index([("equipment_id", 1)], unique=True, background=True)
-        logger.info("Unique index on equipment_id in surgery_equipment ensured.")
+        # Log the tables that were created
+        # Refresh inspector for the specific database to get table names
+        # The existing inspector was on default_engine which is already correct
+        logger.info(f"Available tables in '{DB_NAME}': {inspector.get_table_names()}")
 
-        # Unique index for Patients by Patient ID, created in the background
-        db.patients.create_index([("patient_id", 1)], unique=True, background=True)
-        logger.info("Unique index on patient_id in patients collection ensured.")
-
-        # Reviewing and adjusting indexes based on application needs
-        logger.info("Review existing indexes for optimization opportunities...")
-
-    # ... your existing index creation logic ...
-        find_and_handle_all_duplicates(db)
-        # Now that duplicates are handled, create the unique index
-        db.operating_rooms.create_index([("room_id", 1)], unique=True)
-
-        # Example: Drop an index if it's no longer needed, with logging
-        # db.collection.drop_index("index_name")
-        # logger.info("Dropped unused index: index_name")
-        
-    except OperationFailure as e:
-        logger.error(f"Error creating index: {e}")
+    except Exception as e:
+        logger.error(f"Error setting up database: {e}")
 
 def main():
-    logger.info("Starting database index management...")
-    db = MongoDBClient.get_db()  # Get the database object from your MongoDB client
-    create_indexes(db)  # Pass the database object to the create_indexes function
-    logger.info("Index management completed. Review and manage indexes regularly as your application evolves.")
+    logger.info("Starting database setup...")
+    setup_database()
+    logger.info("Database setup completed.")
 
 if __name__ == "__main__":
     main()

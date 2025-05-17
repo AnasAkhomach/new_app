@@ -1,74 +1,82 @@
-# surgery_equipment_service.py
+"""Service layer for managing surgery equipment in the surgical scheduling system."""
 
-from pymongo.errors import PyMongoError
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from db_config import db
+from sqlalchemy.exc import SQLAlchemyError
 from models import SurgeryEquipment
 
+
 class SurgeryEquipmentService:
+    """Provides services for managing surgery equipment."""
+
     @staticmethod
-    def create_surgery_equipment(equipment_data):
+    def create_surgery_equipment(db, equipment_data):  # Added db parameter
         """Creates a new surgery equipment record."""
         try:
-            document = equipment_data.to_document()
-            db.surgery_equipment.insert_one(document)
-            print(f"Surgery equipment {document['equipment_id']} created successfully.")
-        except PyMongoError as e:
-            print(f"Error creating surgery equipment: {e}")
-
-    @staticmethod
-    def update_surgery_equipment(equipment_id, update_fields):
-        """Updates an existing surgery equipment record."""
-        try:
-            result = db.surgery_equipment.update_one(
-                {"equipment_id": equipment_id},
-                {"$set": update_fields}
+            new_equipment = SurgeryEquipment(
+                name=equipment_data["name"],
+                type=equipment_data["type"],
+                availability=equipment_data.get("availability", True),
             )
-            if result.modified_count:
-                print(f"Surgery equipment {equipment_id} updated successfully.")
-            else:
-                print(f"No changes made to surgery equipment {equipment_id}.")
-        except PyMongoError as e:
-            print(f"Error updating surgery equipment: {e}")
-
-    @staticmethod
-    def delete_surgery_equipment(equipment_id):
-        """Deletes a surgery equipment record."""
-        try:
-            result = db.surgery_equipment.delete_one({"equipment_id": equipment_id})
-            if result.deleted_count:
-                print(f"Surgery equipment {equipment_id} deleted successfully.")
-            else:
-                print(f"Surgery equipment {equipment_id} not found.")
-        except PyMongoError as e:
-            print(f"Error deleting surgery equipment: {e}")
-
-    @staticmethod
-    def get_equipment(equipment_id):
-        """Fetches an equipment by its ID."""
-        try:
-            document = db.surgery_equipment.find_one({"equipment_id": equipment_id})
-            if document:
-                return SurgeryEquipment.from_document(document)
-            else:
-                print("Equipment not found.")
-                return None
-        except PyMongoError as e:
-            print(f"Error fetching equipment: {e}")
+            db.add(new_equipment)
+            db.commit()
+            db.refresh(new_equipment)  # Added refresh
+            print(
+                f"Surgery equipment {new_equipment.equipment_id} created successfully."
+            )
+            return new_equipment.equipment_id
+        except SQLAlchemyError as e:
+            db.rollback()
+            print(f"Error creating surgery equipment: {e}")
             return None
 
-# Example usage
-if __name__ == "__main__":
-    # Example surgery equipment data initialization
-    new_equipment = SurgeryEquipment("EQUIP003", "Laser Scalpel", "Cutting", True)
-    
-    # Create a new equipment record
-    SurgeryEquipmentService.create_surgery_equipment(new_equipment)
-    
-    # Update an existing equipment record
-    SurgeryEquipmentService.update_surgery_equipment("EQUIP003", {"availability": False})
-    
-    # Delete an equipment record
-    SurgeryEquipmentService.delete_surgery_equipment("EQUIP003")
+    @staticmethod
+    def update_surgery_equipment(db, equipment_id, update_fields):  # Added db parameter
+        """Updates an existing surgery equipment record."""
+        try:
+            result = (
+                db.query(SurgeryEquipment)
+                .filter_by(equipment_id=equipment_id)
+                .update(update_fields)
+            )
+            db.commit()
+            if result:
+                print(f"Surgery equipment {equipment_id} updated successfully.")
+                return True  # Added return True
+            print(f"No changes made to surgery equipment {equipment_id}.")
+            return False  # Added return False
+        except SQLAlchemyError as e:
+            db.rollback()
+            print(f"Error updating surgery equipment: {e}")
+            return False  # Added return False on error
+
+    @staticmethod
+    def delete_surgery_equipment(db, equipment_id):  # Added db parameter
+        """Deletes a surgery equipment record."""
+        try:
+            result = (
+                db.query(SurgeryEquipment).filter_by(equipment_id=equipment_id).delete()
+            )
+            db.commit()
+            if result:
+                print(f"Surgery equipment {equipment_id} deleted successfully.")
+                return True  # Added return True
+            print(f"Surgery equipment {equipment_id} not found.")
+            return False  # Added return False
+        except SQLAlchemyError as e:
+            db.rollback()
+            print(f"Error deleting surgery equipment: {e}")
+            return False  # Added return False on error
+
+    @staticmethod
+    def get_equipment(db, equipment_id):  # Added db parameter
+        """Fetches an equipment by its ID."""
+        try:
+            equipment = (
+                db.query(SurgeryEquipment).filter_by(equipment_id=equipment_id).first()
+            )
+            if equipment:
+                return equipment
+            print("Equipment not found.")
+            return None
+        except SQLAlchemyError as e:
+            print(f"Error fetching equipment: {e}")
+            return None

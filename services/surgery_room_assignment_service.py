@@ -1,97 +1,96 @@
-# surgery_room_assignment_service.py
+"""Service layer for managing surgery room assignments in the surgical scheduling system."""
 
-from pymongo.errors import PyMongoError
-import datetime
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from db_config import db
+from sqlalchemy.exc import SQLAlchemyError
 from models import SurgeryRoomAssignment
+import datetime
 
 
 class SurgeryRoomAssignmentService:
-    @staticmethod
-    def to_datetime(time_str):
-        """Converts string to datetime object."""
-        return datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S")
+    """Provides services for managing surgery room assignments."""
 
     @staticmethod
-    def create_surgery_room_assignment(assignment_data):
+    def create_surgery_room_assignment(db, assignment_data):  # Added db parameter
         """Creates a new surgery room assignment."""
         try:
-            document = assignment_data.to_document()
-            # Ensure start_time and end_time are datetime objects
-            document['start_time'] = SurgeryRoomAssignmentService.to_datetime(document['start_time'])
-            document['end_time'] = SurgeryRoomAssignmentService.to_datetime(document['end_time'])
-            db.surgery_room_assignments.insert_one(document)
-            print(f"Surgery room assignment {document['assignment_id']} created successfully.")
-        except PyMongoError as e:
-            print(f"Error creating surgery room assignment: {e}")
-
-    @staticmethod
-    def update_surgery_room_assignment(assignment_id, update_fields):
-        """Updates an existing surgery room assignment."""
-        try:
-            # Convert start_time and end_time to datetime if they are being updated
-            if 'start_time' in update_fields:
-                update_fields['start_time'] = SurgeryRoomAssignmentService.to_datetime(update_fields['start_time'])
-            if 'end_time' in update_fields:
-                update_fields['end_time'] = SurgeryRoomAssignmentService.to_datetime(update_fields['end_time'])
-
-            result = db.surgery_room_assignments.update_one(
-                {"assignment_id": assignment_id},
-                {"$set": update_fields}
+            # Convert start_time and end_time to datetime if present as string
+            for field in ["start_time", "end_time"]:
+                if field in assignment_data and isinstance(assignment_data[field], str):
+                    assignment_data[field] = datetime.datetime.fromisoformat(
+                        assignment_data[field]
+                    )
+            new_assignment = SurgeryRoomAssignment(
+                surgery_id=assignment_data["surgery_id"],
+                room_id=assignment_data["room_id"],
+                start_time=assignment_data["start_time"],
+                end_time=assignment_data["end_time"],
             )
-            if result.modified_count:
-                print(f"Surgery room assignment {assignment_id} updated successfully.")
-            else:
-                print(f"No changes made to surgery room assignment {assignment_id}.")
-        except PyMongoError as e:
-            print(f"Error updating surgery room assignment: {e}")
-
-    @staticmethod
-    def delete_surgery_room_assignment(assignment_id):
-        """Deletes a surgery room assignment."""
-        try:
-            result = db.surgery_room_assignments.delete_one({"assignment_id": assignment_id})
-            if result.deleted_count:
-                print(f"Surgery room assignment {assignment_id} deleted successfully.")
-            else:
-                print(f"Surgery room assignment {assignment_id} not found.")
-        except PyMongoError as e:
-            print(f"Error deleting surgery room assignment: {e}")
-
-    @staticmethod
-    def get_assignment(assignment_id):
-        """Fetches a room assignment by its ID."""
-        try:
-            document = db.surgery_room_assignments.find_one({"assignment_id": assignment_id})
-            if document:
-                return SurgeryRoomAssignment.from_document(document)
-            else:
-                print("Room assignment not found.")
-                return None
-        except PyMongoError as e:
-            print(f"Error fetching room assignment: {e}")
+            db.add(new_assignment)
+            db.commit()
+            db.refresh(new_assignment)
+            print(
+                f"Surgery room assignment {new_assignment.assignment_id} created successfully."
+            )
+            return new_assignment.assignment_id
+        except SQLAlchemyError as e:
+            db.rollback()
+            print(f"Error creating surgery room assignment: {e}")
             return None
 
-# Example usage
-if __name__ == "__main__":
-    
-    # Example surgery room assignment data initialization
-    new_assignment = SurgeryRoomAssignment(
-        "ASSIGN002", 
-        "SURG002", 
-        "ROOM001", 
-        "2023-01-01T09:00:00",  # Correct format
-        "2023-01-01T11:00:00"
-    )    
-    # Create a new assignment
-    SurgeryRoomAssignmentService.create_surgery_room_assignment(new_assignment)
-    
-    # Example updates (assuming the fields to be updated are passed correctly)
-    SurgeryRoomAssignmentService.update_surgery_room_assignment("ASSIGN002", {"room_id": "ROOM002", "start_time": "2023-01-02T09:00:00"})
-    
-    # Delete an assignment
-    SurgeryRoomAssignmentService.delete_surgery_room_assignment("ASSIGN002")
-    db.client.close()
+    @staticmethod
+    def update_surgery_room_assignment(db, assignment_id, update_fields):
+        """Updates an existing surgery room assignment record."""
+        try:
+            result = (
+                db.query(SurgeryRoomAssignment)
+                .filter_by(assignment_id=assignment_id)
+                .update(update_fields)
+            )
+            db.commit()
+            if result:
+                print(f"Room assignment {assignment_id} updated successfully.")
+                return True
+            print(
+                f"No room assignment found with ID {assignment_id} or no new data to update."
+            )
+            return False
+        except SQLAlchemyError as e:
+            db.rollback()
+            print(f"Error updating room assignment: {e}")
+            return False
+
+    @staticmethod
+    def delete_surgery_room_assignment(db, assignment_id):
+        """Deletes a surgery room assignment record."""
+        try:
+            result = (
+                db.query(SurgeryRoomAssignment)
+                .filter_by(assignment_id=assignment_id)
+                .delete()
+            )
+            db.commit()
+            if result:
+                print(f"Room assignment {assignment_id} deleted successfully.")
+                return True
+            print(f"No room assignment found with ID {assignment_id}.")
+            return False
+        except SQLAlchemyError as e:
+            db.rollback()
+            print(f"Error deleting room assignment: {e}")
+            return False
+
+    @staticmethod
+    def get_assignment(db, assignment_id):
+        """Retrieves a surgery room assignment by assignment_id and returns a SurgeryRoomAssignment instance."""
+        try:
+            assignment = (
+                db.query(SurgeryRoomAssignment)
+                .filter_by(assignment_id=assignment_id)
+                .first()
+            )
+            if assignment:
+                return assignment
+            print(f"No room assignment found with ID {assignment_id}")
+            return None
+        except SQLAlchemyError as e:
+            print(f"Error retrieving room assignment: {e}")
+            return None

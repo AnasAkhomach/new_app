@@ -1,48 +1,117 @@
 # seed_database.py
-from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
 from initialize_data import (
-    initialize_patients,
-    initialize_staff_members,
-    initialize_surgeons,  # Ensure this function is updated for the new Surgeon model
-    initialize_operating_rooms,
-    initialize_surgeries,
-    initialize_surgery_equipments,
-    initialize_surgery_equipment_usages,
-    initialize_surgery_room_assignments,
-    initialize_surgery_staff_assignments,
-    initialize_surgery_appointments
+    initialize_patients_sqlalchemy,
+    initialize_staff_members_sqlalchemy,
+    initialize_surgeons_sqlalchemy,
+    initialize_operating_rooms_sqlalchemy,
+    initialize_surgery_equipments_sqlalchemy,
+    initialize_surgeries_sqlalchemy, # Added missing import
 )
-from mongodb_transaction_manager import MongoDBClient  # Adjusted import
+from models import OperatingRoom, Patient, Staff, Surgeon, SurgeryEquipment
 
-# Get the database object from MongoDBClient
-db = MongoDBClient.get_db()
+from datetime import date
 
-def seed_collection(collection_name, data_initializer, unique_field=None):
-    """Helper function to seed a collection with data, using upserts for items with a unique identifier."""
-    collection = db[collection_name]
-    data = data_initializer()
-    for item in data:
-        if unique_field:
-            # Upsert strategy: Update the document if exists; insert if not
-            collection.update_one({unique_field: item[unique_field]}, {'$set': item}, upsert=True)
-        else:
-            # For collections without a unique field, insert directly
-            collection.insert_one(item)
-    print(f"Seeding {collection_name} completed.")
+# Example seed data for MySQL
+# This data is illustrative. Actual data comes from initialize_data functions.
+operating_rooms_example = [
+    OperatingRoom(location="OR-1"),
+    OperatingRoom(location="OR-2"),
+]
+
+patients_example = [
+    Patient(
+        name="John Doe",
+        dob=date(1980, 5, 15),
+        contact_info="555-1234",
+        privacy_consent=True,
+    ),
+    Patient(
+        name="Jane Smith",
+        dob=date(1990, 8, 22),
+        contact_info="555-5678",
+        privacy_consent=True,
+    ),
+]
+
+staff_members_example = [
+    Staff(
+        name="Alice Brown",
+        role="Nurse",
+        contact_info="555-1111",
+        specialization="General",
+        availability=True,
+    ),
+    Staff(
+        name="Bob White",
+        role="Anesthetist",
+        contact_info="555-2222",
+        specialization="Anesthesia",
+        availability=True,
+    ),
+]
+
+surgeons_example = [
+    Surgeon(
+        name="Dr. House",
+        contact_info="555-3333",
+        specialization="Cardiology",
+        credentials="MD, PhD",
+        availability=True,
+    ),
+    Surgeon(
+        name="Dr. Grey",
+        contact_info="555-4444",
+        specialization="Neurosurgery",
+        credentials="MD",
+        availability=True,
+    ),
+]
+
+surgery_equipments_example = [
+    SurgeryEquipment(name="Scalpel", type="Cutting", availability=True),
+    SurgeryEquipment(name="Retractor", type="Holding", availability=True),
+]
+
+
+# Removed SessionLocal import as session will be passed in
+
+def seed_initial_data(db_session):
+    """Seeds the database with initial data using the provided session."""
+    try:
+        # Add initial data using functions from initialize_data.py
+        # These functions should return lists of SQLAlchemy model instances.
+        db_session.add_all(initialize_operating_rooms_sqlalchemy())
+        db_session.add_all(initialize_patients_sqlalchemy())
+        db_session.add_all(initialize_staff_members_sqlalchemy())
+        db_session.add_all(initialize_surgeons_sqlalchemy())
+        db_session.add_all(initialize_surgery_equipments_sqlalchemy())
+        db_session.add_all(initialize_surgeries_sqlalchemy()) # Added surgery seeding
+        # Add other data sets as needed, e.g., surgeries, assignments, etc.
+        # Ensure corresponding initialize_..._sqlalchemy functions exist in initialize_data.py
+
+        db_session.commit()
+        # print("Seed data inserted successfully using provided session.") # Logging can be handled by caller
+    except Exception as e:
+        db_session.rollback()
+        # print(f"Error seeding data using provided session: {e}") # Error handling/logging by caller
+        raise # Re-raise the exception to be handled by the caller
+    # finally:
+        # The session is managed by the caller, so no db_session.close() here.
+
 
 if __name__ == "__main__":
-    # Seed the collections with initial data
-    seed_collection('patients', initialize_patients, 'patient_id')
-    seed_collection('staff', initialize_staff_members, 'staff_id')
-    seed_collection('surgeons', initialize_surgeons, 'surgeon_id')  # Note the unique_field 'surgeon_id'
-    seed_collection('operating_rooms', initialize_operating_rooms, 'room_id')
-    seed_collection('surgeries', initialize_surgeries, 'surgery_id')
-    seed_collection('equipment', initialize_surgery_equipments, 'equipment_id')
-    seed_collection('surgery_equipment_usage', initialize_surgery_equipment_usages)  # No unique field provided
-    seed_collection('surgery_room_assignments', initialize_surgery_room_assignments)  # No unique field provided
-    seed_collection('surgery_staff_assignments', initialize_surgery_staff_assignments)  # No unique field provided
-    seed_collection('surgery_appointments', initialize_surgery_appointments, 'appointment_id')
+    # Load environment variables if necessary (e.g., for database connection strings)
+    load_dotenv()
+    from db_config import SessionLocal # Import here for standalone execution
 
-    print("Database seeding completed.")
+    print("Starting database seeding (standalone execution)...")
+    db = SessionLocal()
+    try:
+        seed_initial_data(db) # Call the modified function
+        print("Database seeding completed (standalone execution).")
+    except Exception as e:
+        print(f"Error during standalone database seeding: {e}")
+    finally:
+        db.close()
