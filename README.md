@@ -251,8 +251,7 @@ As the primary developer, I contributed to:
 
 ## Author
 
-* **LinkedIn:** [Your LinkedIn](https://linkedin.com/in/your-profile)
-* **GitHub:** [Your GitHub](https://github.com/your-username)
+ME
 
 ---
 
