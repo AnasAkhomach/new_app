@@ -72,7 +72,9 @@ class Surgery(Base):
     __tablename__ = "surgery"
     surgery_id = Column(Integer, primary_key=True, autoincrement=True)
     scheduled_date = Column(DateTime, nullable=False)
-    surgery_type = Column(String(100), nullable=False)
+    # surgery_type = Column(String(100), nullable=False) # Original line being replaced
+    surgery_type_id = Column(Integer, ForeignKey("surgerytype.type_id", ondelete="RESTRICT"), nullable=False)
+    surgery_type_details = relationship("SurgeryType", back_populates="surgeries")
     # Changed MySQLEnum to GenericEnum with native_enum=False
     urgency_level = Column(
         GenericEnum(
@@ -239,3 +241,62 @@ class SurgeryRoomAssignment(Base):
     )
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
+
+
+class SurgeryType(Base):
+    __tablename__ = "surgerytype"
+    type_id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+
+    # Relationship to Surgery, indicating which surgeries are of this type
+    surgeries = relationship("Surgery", back_populates="surgery_type_details")
+
+    # Relationships to SequenceDependentSetupTime
+    # Setup times where this surgery type is the preceding type
+    setups_from_this_type = relationship(
+        "SequenceDependentSetupTime",
+        foreign_keys="[SequenceDependentSetupTime.from_surgery_type_id]",
+        back_populates="from_surgery_type_details"
+    )
+    # Setup times where this surgery type is the succeeding type
+    setups_to_this_type = relationship(
+        "SequenceDependentSetupTime",
+        foreign_keys="[SequenceDependentSetupTime.to_surgery_type_id]",
+        back_populates="to_surgery_type_details"
+    )
+
+    def __repr__(self):
+        return f"<SurgeryType(type_id={self.type_id}, name='{self.name}')>"
+
+
+class SequenceDependentSetupTime(Base):
+    __tablename__ = "sequencedependentsetuptime"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    from_surgery_type_id = Column(
+        Integer,
+        ForeignKey("surgerytype.type_id", ondelete="CASCADE"),
+        nullable=False
+    )
+    to_surgery_type_id = Column(
+        Integer,
+        ForeignKey("surgerytype.type_id", ondelete="CASCADE"),
+        nullable=False
+    )
+    setup_time_minutes = Column(Integer, nullable=False)
+
+    # Relationships to SurgeryType
+    from_surgery_type_details = relationship(
+        "SurgeryType",
+        foreign_keys=[from_surgery_type_id],
+        back_populates="setups_from_this_type"
+    )
+    to_surgery_type_details = relationship(
+        "SurgeryType",
+        foreign_keys=[to_surgery_type_id],
+        back_populates="setups_to_this_type"
+    )
+
+    def __repr__(self):
+        return f"<SequenceDependentSetupTime(id={self.id}, from_type_id={self.from_surgery_type_id}, to_type_id={self.to_surgery_type_id}, time={self.setup_time_minutes})>"

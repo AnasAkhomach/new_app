@@ -14,6 +14,8 @@ from models import ( # Assuming models.py defines these
     SurgeryEquipment,
     SurgeryRoomAssignment,
     SurgeryEquipmentUsage,
+    SurgeryType,  # Added
+    SequenceDependentSetupTime,  # Added
     Base
 )
 from tabu_list import TabuList
@@ -39,8 +41,10 @@ class TabuSearchScheduler:
         self.surgeons: List[Surgeon] = []
         self.equipment: List[SurgeryEquipment] = []
         self.surgery_room_assignments: List[SurgeryRoomAssignment] = [] # In-memory assignments for current run
+        self.sds_times_data: Dict[tuple[int, int], int] = {} # To store {(from_type_id, to_type_id): setup_minutes}
+        self.surgery_types: List[SurgeryType] = [] # To store SurgeryType objects
 
-        self._load_initial_data()
+        self._load_initial_data() # This will now also load SDST data
 
         # Initialize refactored components
         self.feasibility_checker = FeasibilityChecker(
@@ -55,13 +59,13 @@ class TabuSearchScheduler:
             operating_rooms=self.operating_rooms,
             feasibility_checker=self.feasibility_checker,
             surgery_equipments=self.equipment, # Added missing parameter
-            surgery_equipment_usages=[] # Added missing parameter, assuming empty list is acceptable for now
+            surgery_equipment_usages=[], # Added missing parameter, assuming empty list is acceptable for now
+            sds_times_data=self.sds_times_data # Pass the loaded SDST data
         )
         self.solution_evaluator = SolutionEvaluator(
             db_session=self.db_session,
-            surgeries_data=self.surgeries, # Corrected parameter name
-            operating_rooms_data=self.operating_rooms, # Corrected parameter name
-            feasibility_checker=self.feasibility_checker
+            weights=None,  # Or load from config
+            sds_times_data=self.sds_times_data # Pass the loaded SDST data
         )
         self.neighborhood_strategies = NeighborhoodStrategies(
             db_session=self.db_session,
@@ -69,12 +73,14 @@ class TabuSearchScheduler:
             operating_rooms_data=self.operating_rooms, # Corrected parameter name
             surgeons_data=self.surgeons, # Corrected parameter name
             feasibility_checker=self.feasibility_checker,
-            scheduler_utils=self.scheduler_utils
+            scheduler_utils=self.scheduler_utils,
+            sds_times_data=self.sds_times_data # Pass SDST data
         )
         self.tabu_search_core = TabuSearchCore(
             solution_evaluator=self.solution_evaluator,
             neighborhood_generator=self.neighborhood_strategies, # Corrected parameter name
-            initial_solution_assignments=self.surgery_room_assignments # This will be an empty list initially
+            initial_solution_assignments=self.surgery_room_assignments, # This will be an empty list initially
+            feasibility_checker=self.feasibility_checker # Add feasibility_checker here
         )
         # self.tabu_search_core will be properly initialized in the run() method with the actual initial solution
 
@@ -88,11 +94,19 @@ class TabuSearchScheduler:
                 self.operating_rooms = self.db_session.query(OperatingRoom).all()
                 self.surgeons = self.db_session.query(Surgeon).all()
                 self.equipment = self.db_session.query(SurgeryEquipment).all()
-                # Load existing assignments if needed for context, but Tabu usually starts fresh or from a heuristic
-                # self.surgery_room_assignments = self.db_session.query(SurgeryRoomAssignment).all()
+                self.surgery_types = self.db_session.query(SurgeryType).all() # Load Surgery Types
+
+                # Load Sequence Dependent Setup Times and format them for SchedulerUtils
+                sds_times_raw = self.db_session.query(SequenceDependentSetupTime).all()
+                self.sds_times_data = {
+                    (sds.from_surgery_type_id, sds.to_surgery_type_id): sds.setup_time_minutes
+                    for sds in sds_times_raw
+                }
+
                 logger.info(
                     f"Loaded {len(self.surgeries)} surgeries, {len(self.operating_rooms)} rooms, "
-                    f"{len(self.surgeons)} surgeons, {len(self.equipment)} equipment items from DB."
+                    f"{len(self.surgeons)} surgeons, {len(self.equipment)} equipment items, "
+                    f"{len(self.surgery_types)} surgery types, and {len(self.sds_times_data)} SDST entries from DB."
                 )
             except Exception as e:
                 logger.error(f"Error loading data from database: {e}")
@@ -101,6 +115,8 @@ class TabuSearchScheduler:
                 self.operating_rooms = []
                 self.surgeons = []
                 self.equipment = []
+                self.surgery_types = []
+                self.sds_times_data = {}
         else:
             logger.warning(
                 "No DB session provided. Scheduler will operate with empty initial data unless populated otherwise."
@@ -143,7 +159,8 @@ class TabuSearchScheduler:
         self.tabu_search_core = TabuSearchCore(
             solution_evaluator=self.solution_evaluator,
             neighborhood_generator=self.neighborhood_strategies,
-            initial_solution_assignments=initial_solution_assignments
+            initial_solution_assignments=initial_solution_assignments,
+            feasibility_checker=self.feasibility_checker # Add feasibility_checker here
         )
         logger.info("TabuSearchCore re-initialized in run() method with populated initial solution.")
 

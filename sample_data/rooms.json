@@ -1,0 +1,17 @@
+[
+  {
+    "room_id": 1,
+    "name": "OR 1",
+    "operational_start_time": "08:00:00"
+  },
+  {
+    "room_id": 2,
+    "name": "OR 2",
+    "operational_start_time": "09:00:00"
+  },
+  {
+    "room_id": 3,
+    "name": "OR 3",
+    "operational_start_time": "08:30:00"
+  }
+]

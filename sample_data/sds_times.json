@@ -1,0 +1,47 @@
+[
+  {
+    "from_surgery_type_id": 1,
+    "to_surgery_type_id": 1,
+    "setup_time_minutes": 15
+  },
+  {
+    "from_surgery_type_id": 1,
+    "to_surgery_type_id": 2,
+    "setup_time_minutes": 30
+  },
+  {
+    "from_surgery_type_id": 1,
+    "to_surgery_type_id": 3,
+    "setup_time_minutes": 20
+  },
+  {
+    "from_surgery_type_id": 2,
+    "to_surgery_type_id": 1,
+    "setup_time_minutes": 25
+  },
+  {
+    "from_surgery_type_id": 2,
+    "to_surgery_type_id": 2,
+    "setup_time_minutes": 15
+  },
+  {
+    "from_surgery_type_id": 2,
+    "to_surgery_type_id": 3,
+    "setup_time_minutes": 35
+  },
+  {
+    "from_surgery_type_id": 3,
+    "to_surgery_type_id": 1,
+    "setup_time_minutes": 20
+  },
+  {
+    "from_surgery_type_id": 3,
+    "to_surgery_type_id": 2,
+    "setup_time_minutes": 30
+  },
+  {
+    "from_surgery_type_id": 3,
+    "to_surgery_type_id": 3,
+    "setup_time_minutes": 15
+  }
+]

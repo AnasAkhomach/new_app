@@ -11,31 +11,39 @@ class WorkloadBalanceCalculator:
         self.db_session = db_session
         # If direct db access was used here, it needs to be refactored or data passed in.
 
-    def calculate_workload_balance(self, surgeries):
+    def calculate_workload_balance(self, surgery_assignments):
         # Initialize a dictionary to count surgeries per surgeon
         surgery_count_per_surgeon = {}
 
-        for surgery in surgeries:
-            surgeon_id = surgery.get(
-                "surgeon_id"
-            )  # Assumes surgery is a dict or object with 'surgeon_id'
+        for assignment in surgery_assignments: # Expecting a list of SurgeryRoomAssignment objects
+            if not hasattr(assignment, 'surgery') or not assignment.surgery or not hasattr(assignment.surgery, 'surgeon_id'):
+                continue # Skip if the assignment or surgery or surgeon_id is invalid
+
+            surgeon_id = assignment.surgery.surgeon_id
             if surgeon_id:
                 surgery_count_per_surgeon[surgeon_id] = (
                     surgery_count_per_surgeon.get(surgeon_id, 0) + 1
                 )
 
         # Calculate the balance metric, such as standard deviation of surgery counts
-        if len(surgery_count_per_surgeon) > 0:
-            avg_count = sum(surgery_count_per_surgeon.values()) / len(
-                surgery_count_per_surgeon
-            )
-            variance = sum(
-                (count - avg_count) ** 2 for count in surgery_count_per_surgeon.values()
-            ) / len(surgery_count_per_surgeon)
+        if len(surgery_count_per_surgeon) > 1: # Need at least two surgeons to calculate variance/std_dev meaningfully
+            counts = list(surgery_count_per_surgeon.values())
+            avg_count = sum(counts) / len(counts)
+            variance = sum((count - avg_count) ** 2 for count in counts) / len(counts)
             std_dev = variance**0.5
+            # Normalize the standard deviation by the average to get a coefficient of variation (CV)
+            # A lower CV indicates better balance. CV = 0 means perfect balance.
+            # Avoid division by zero if avg_count is 0 (though unlikely if there are surgeries)
+            cv = (std_dev / avg_count) * 100 if avg_count > 0 else 0
+            # We want to maximize balance, so a higher score is better.
+            # Let's use (1 - CV/100) if CV is scaled 0-100, or simply penalize high std_dev.
+            # For now, returning raw std_dev; the evaluator can decide how to interpret it (lower is better).
             return std_dev
+        elif len(surgery_count_per_surgeon) <= 1:
+             # If only one surgeon or no surgeons, balance is perfect (or not applicable)
+            return 0.0
         else:
-            return 0  # Return 0 for empty input for test consistency
+            return 0.0  # Return 0.0 for empty input or single surgeon for consistency
 
 
 if __name__ == "__main__":
