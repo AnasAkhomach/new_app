@@ -1,0 +1,358 @@
+:root {
+  /* Color Palette */
+  --color-primary: #007bff; /* Professional Blue */
+  --color-primary-dark: #0056b3; /* Darker Blue for hover */
+  --color-secondary: #6c757d; /* Secondary Gray */
+  --color-success: #28a745; /* Green for success */
+  --color-warning: #ffc107; /* Yellow for warning */
+  --color-danger: #dc3545; /* Red for danger/error */
+  --color-info: #17a2b8; /* Cyan for informational */
+
+  /* Neutral Palette */
+  --color-white: #ffffff;
+  --color-light-gray: #f8f9fa; /* Very light background */
+  --color-mid-light-gray: #e9ecef; /* Borders, separators */
+  --color-gray: #ced4da; /* Inputs, borders */
+  --color-dark-gray: #6c757d; /* Secondary text */
+  --color-very-dark-gray: #343a40; /* Body text */
+
+  /* Background */
+  --color-background: var(--color-light-gray);
+
+  /* Typography */
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif; /* Using Inter as an example, fallback to system fonts */
+  line-height: 1.6;
+  font-weight: 400;
+  color: var(--color-very-dark-gray); /* Default text color */
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Global box-sizing for easier layout calculations */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh; /* Ensure body takes at least full viewport height */
+  background-color: var(--color-background);
+  color: var(--color-very-dark-gray);
+}
+
+#app {
+  /* App container should not have default padding/margin if layout component handles it */
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: left; /* Align content left by default */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-very-dark-gray); /* Headings color */
+  line-height: 1.2;
+  margin-top: 0;
+  margin-bottom: 0.5em;
+}
+
+h1 {
+  font-size: 2.5em;
+}
+
+h2 {
+  font-size: 2em;
+}
+
+h3 {
+  font-size: 1.75em;
+}
+
+a {
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: none; /* Remove default underline */
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+  text-decoration: underline; /* Add underline on hover */
+}
+
+button {
+  border-radius: 4px; /* Slightly less rounded */
+  border: 1px solid transparent;
+  padding: 0.8em 1.5em; /* More padding */
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  cursor: pointer;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+button:hover {
+  background-color: var(--color-primary-dark);
+  border-color: var(--color-primary-dark); /* Match border on hover */
+}
+
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+  outline-color: var(--color-primary); /* Use primary color for focus */
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+textarea,
+select {
+  padding: 10px;
+  border: 1px solid var(--color-mid-light-gray);
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 1em;
+  color: var(--color-very-dark-gray);
+  background-color: var(--color-white);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Focus visible ring */
+}
+
+/* --- App Layout Styles --- */
+.app-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr; /* Default: Wider Sidebar */
+  grid-template-rows: 60px 1fr; /* Top nav fixed height */
+  height: 100vh; /* Full viewport height */
+  background-color: var(--color-background);
+  overflow: hidden; /* Prevent scrollbars on layout itself */
+  transition: grid-template-columns 0.3s ease; /* Smooth transition for collapse */
+}
+
+.app-layout.sidebar-collapsed {
+    grid-template-columns: 60px 1fr; /* Collapsed: Narrower Sidebar */
+}
+
+.top-nav-bar {
+  grid-column: 1 / 3; /* Span across both columns */
+  grid-row: 1;
+  background-color: var(--color-white);
+  padding: 0 20px; /* Horizontal padding */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08); /* Softer shadow */
+  z-index: 10; /* Ensure it's above other content */
+  height: 60px; /* Match grid row height */
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  font-size: 1.3em; /* Slightly larger font */
+  font-weight: 600; /* Semi-bold */
+  color: var(--color-very-dark-gray);
+}
+
+.toggle-sidebar-button {
+    margin-right: 10px;
+    font-size: 1em;
+    padding: 5px; /* Adjust padding for button */
+    background: none; /* No background */
+    border: none;
+    color: var(--color-dark-gray);
+    cursor: pointer;
+    transition: transform 0.3s ease; /* Transition for icon */
+}
+
+.app-logo-small {
+    height: 35px; /* Slightly larger logo */
+    margin-right: 12px;
+    transition: margin-right 0.3s ease; /* Smooth transition */
+}
+
+.app-layout.sidebar-collapsed .app-logo-small {
+     margin-right: 0; /* Remove margin when collapsed */
+}
+
+.global-search input[type="text"] {
+    padding: 8px 15px; /* More horizontal padding */
+    border: 1px solid var(--color-gray); /* Use gray from palette */
+    border-radius: 20px; /* Pill shape */
+    font-size: 0.9em;
+    width: 250px; /* Adjust as needed */
+    background-color: var(--color-light-gray); /* Light gray background for search */
+    color: var(--color-very-dark-gray);
+}
+
+.user-utilities {
+    display: flex;
+    align-items: center;
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    font-size: 1.3em; /* Slightly larger icon */
+    cursor: pointer;
+    margin-right: 20px; /* More space */
+    padding: 8px; /* Increased padding */
+    color: var(--color-dark-gray); /* Icon color */
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.icon-button:hover {
+    background-color: var(--color-light-gray);
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    cursor: pointer; /* Indicate clickable */
+}
+
+.user-profile span {
+    margin-right: 8px;
+    color: var(--color-very-dark-gray);
+    font-weight: 500;
+}
+
+/* Placeholder for a user icon */
+.user-profile::after {
+    content: '👤'; /* Example icon */
+    font-size: 1.3em;
+    color: var(--color-dark-gray);
+}
+
+
+.left-sidebar {
+  grid-column: 1; /* First column */
+  grid-row: 2; /* Second row */
+  background-color: var(--color-white);
+  padding: 20px 0; /* Vertical padding */
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.08); /* Softer shadow */
+  overflow-y: auto; /* Add scrolling if content overflows */
+  border-right: 1px solid var(--color-mid-light-gray); /* Subtle border */
+  transition: width 0.3s ease; /* Transition for sidebar width */
+}
+
+.app-layout.sidebar-collapsed .left-sidebar {
+    /* Grid column handles the width, just need to adjust padding/content */
+    align-items: center; /* Center content when collapsed */
+    padding: 20px 0; /* Adjust padding if needed */
+}
+
+.left-sidebar nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.left-sidebar nav li {
+  margin-bottom: 0; /* Remove space between list items, padding on link handles spacing */
+}
+
+.left-sidebar nav a {
+  display: flex; /* Use flex for alignment */
+  align-items: center;
+  padding: 12px 20px; /* Increased padding */
+  color: var(--color-very-dark-gray); /* Default link color */
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease, padding 0.3s ease; /* Add padding transition */
+  font-size: 1.05em; /* Slightly larger font */
+}
+
+.app-layout.sidebar-collapsed .left-sidebar nav a {
+    justify-content: center; /* Center content when collapsed */
+    padding: 12px; /* Reduced padding for icon-only view */
+}
+
+.left-sidebar nav a:hover {
+  background-color: var(--color-light-gray); /* Highlight on hover */
+  color: var(--color-primary); /* Primary color on hover */
+}
+
+.left-sidebar nav .router-link-active {
+    background-color: var(--color-primary); /* Active link color */
+    color: var(--color-white); /* Active link text color */
+    font-weight: 600; /* Semi-bold */
+    border-left: 4px solid var(--color-primary-dark); /* Highlight active link */
+    padding-left: 16px; /* Adjust padding due to border */
+}
+
+.app-layout.sidebar-collapsed .left-sidebar nav .router-link-active {
+     padding-left: 12px; /* No border when collapsed, adjust padding */
+     border-left: none; /* Remove border when collapsed */
+}
+
+/* Add spacing between link text and potential icon if added later */
+.left-sidebar nav a span {
+    margin-right: 10px; /* Space between text and icon */
+}
+
+.app-layout.sidebar-collapsed .left-sidebar nav a span {
+    margin-right: 0; /* Remove margin when text is hidden */
+}
+
+.logout-item {
+    margin-top: 30px; /* Space above logout button */
+    text-align: center; /* Center button when collapsed */
+}
+
+.logout-button {
+    display: block;
+    width: calc(100% - 40px); /* Adjust width considering padding */
+    margin: 0px auto; /* Center button */
+    padding: 10px;
+    background-color: var(--color-danger); /* Use danger color for logout */
+    color: var(--color-white);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s ease;
+}
+
+.app-layout.sidebar-collapsed .logout-button {
+    width: calc(100% - 24px); /* Adjust width for narrower sidebar padding */
+    padding: 10px 5px; /* Adjust padding */
+}
+
+.logout-button:hover {
+    background-color: #c82333; /* Darker red */
+}
+
+.main-content {
+  grid-column: 2; /* Second column */
+  grid-row: 2; /* Second row */
+  padding: 20px; /* Padding inside main content area */
+  overflow-y: auto; /* Add scrolling for main content */
+}
+
+/* Hide text content in sidebar when collapsed */
+.app-layout.sidebar-collapsed .left-sidebar nav a span,
+.app-layout.sidebar-collapsed .logout-button span {
+    display: none; /* Hide text */
+}
+
+/* Adjust app brand text visibility */
+.app-brand span {
+    transition: opacity 0.3s ease;
+}
+
+.app-layout.sidebar-collapsed .app-brand span {
+    opacity: 0; /* Hide text in app brand */
+    width: 0; /* Collapse width */
+    overflow: hidden; /* Prevent text overflow */
+}
