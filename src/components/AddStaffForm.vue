@@ -1,42 +1,45 @@
 <template>
   <div class="add-staff-form">
-    <h3>Add New Staff Member</h3>
+    <h3>{{ formTitle }}</h3>
     <form @submit.prevent="handleSubmit">
       <div class="input-group">
         <label for="staff-name">Name</label>
-        <input type="text" id="staff-name" v-model="staffData.name" required>
+        <input type="text" id="staff-name" v-model="staffData.name" @input="clearError('name')">
+        <span v-if="errors.name" class="error-message">{{ errors.name }}</span>
       </div>
 
       <div class="input-group">
         <label for="staff-role">Role</label>
-         <select id="staff-role" v-model="staffData.role" required>
+         <select id="staff-role" v-model="staffData.role" @change="clearError('role')">
           <option value="">Select Role</option>
           <option value="Surgeon">Surgeon</option>
           <option value="Nurse">Nurse</option>
           <option value="Anesthetist">Anesthetist</option>
           <option value="Other">Other</option>
         </select>
+        <span v-if="errors.role" class="error-message">{{ errors.role }}</span>
       </div>
 
       <div class="input-group">
         <label for="staff-specializations">Specialization(s)</label>
-        <!-- Multi-select or tag input could be better later -->
         <input type="text" id="staff-specializations" v-model="staffData.specializationsString">
         <small>Enter specializations separated by commas (e.g., Orthopedics, Sports Medicine)</small>
+        <!-- Basic validation for specializations can be added if it becomes a strict requirement -->
       </div>
 
        <div class="input-group">
         <label for="staff-status">Status</label>
-        <select id="staff-status" v-model="staffData.status" required>
+        <select id="staff-status" v-model="staffData.status" @change="clearError('status')">
           <option value="">Select Status</option>
           <option value="Active">Active</option>
           <option value="On Leave">On Leave</option>
           <option value="Inactive">Inactive</option>
         </select>
+        <span v-if="errors.status" class="error-message">{{ errors.status }}</span>
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="button-primary">Save Staff</button>
+        <button type="submit" class="button-primary">{{ submitButtonText }}</button>
         <button type="button" class="button-secondary" @click="handleCancel">Cancel</button>
       </div>
     </form>
@@ -44,39 +47,103 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 
-// Define initial form data structure
-const staffData = ref({
+const props = defineProps({
+  staffToEdit: {
+    type: Object,
+    default: null
+  }
+});
+
+const emit = defineEmits(['save', 'cancel']);
+
+const initialStaffData = () => ({
+  id: null,
   name: '',
   role: '',
-  specializations: [], // Array to store specializations
-  specializationsString: '', // String for input binding
+  specializations: [],
+  specializationsString: '',
   status: '',
 });
+
+const staffData = ref(initialStaffData());
+const errors = ref({}); // Added for validation errors
+
+const isEditMode = computed(() => !!props.staffToEdit);
+const formTitle = computed(() => isEditMode.value ? 'Edit Staff Member' : 'Add New Staff Member');
+const submitButtonText = computed(() => isEditMode.value ? 'Update Staff' : 'Save Staff');
+
+// Watch for changes in staffToEdit prop to pre-fill form
+watch(() => props.staffToEdit, (newStaff) => {
+  clearAllErrors(); // Clear errors when staffToEdit changes
+  if (newStaff) {
+    staffData.value = {
+      ...newStaff,
+      specializationsString: newStaff.specializations ? newStaff.specializations.join(', ') : ''
+    };
+  } else {
+    staffData.value = initialStaffData();
+  }
+}, { immediate: true });
 
 // Watch the string input and update the array
 watch(() => staffData.value.specializationsString, (newValue) => {
     staffData.value.specializations = newValue.split(',').map(s => s.trim()).filter(s => s);
 });
 
+const clearError = (field) => {
+  if (errors.value[field]) {
+    errors.value[field] = '';
+  }
+};
+
+const clearAllErrors = () => {
+  errors.value = {};
+};
+
+const validateForm = () => {
+  clearAllErrors();
+  let isValid = true;
+  if (!staffData.value.name.trim()) {
+    errors.value.name = 'Name is required.';
+    isValid = false;
+  }
+  if (!staffData.value.role) {
+    errors.value.role = 'Role is required.';
+    isValid = false;
+  }
+  if (!staffData.value.status) {
+    errors.value.status = 'Status is required.';
+    isValid = false;
+  }
+  return isValid;
+};
+
 const handleSubmit = () => {
-  console.log('Submitting Staff data:', staffData.value);
-  // Placeholder for sending data to backend or parent component
-  // After successful save, reset form and close/hide form
-  // emit('save', staffData.value);
+  if (!validateForm()) {
+    return; // Stop submission if validation fails
+  }
+
+  const payload = { ...staffData.value };
+  delete payload.specializationsString;
+
+  if (isEditMode.value) {
+    console.log('Updating Staff data:', payload);
+    emit('save', { ...payload, isUpdate: true });
+  } else {
+    console.log('Submitting new Staff data:', payload);
+    emit('save', payload);
+  }
+  clearAllErrors(); // Clear errors on successful submission
 };
 
 const handleCancel = () => {
   console.log('Cancelling Staff form');
-  // Placeholder for resetting form and closing/hiding form
-  staffData.value = { name: '', role: '', specializations: [], specializationsString: '', status: '' }; // Reset form
-  // Emit an event to parent to indicate cancellation
-  // emit('cancel'); 
+  staffData.value = initialStaffData(); // Reset form
+  clearAllErrors(); // Clear errors on cancel
+  emit('cancel');
 };
-
-// Define emits if using events to communicate with parent
-// const emit = defineEmits(['save', 'cancel']);
 
 </script>
 
@@ -123,6 +190,18 @@ const handleCancel = () => {
   font-size: 1em;
   color: var(--color-very-dark-gray);
   background-color: var(--color-white);
+}
+
+.error-message {
+  color: var(--color-error);
+  font-size: 0.8em;
+  margin-top: 4px;
+  display: block;
+}
+
+.input-group input.invalid,
+.input-group select.invalid {
+  border-color: var(--color-error);
 }
 
 .input-group input:focus,

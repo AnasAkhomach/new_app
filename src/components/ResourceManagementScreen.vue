@@ -3,28 +3,31 @@
     <h1>Resource Management</h1>
 
     <div class="tabs">
-      <button 
+      <button
         :class="{ active: activeTab === 'ors' }"
         @click="activeTab = 'ors'"
       >Operating Rooms</button>
-      <button 
+      <button
         :class="{ active: activeTab === 'staff' }"
         @click="activeTab = 'staff'"
       >Staff</button>
-      <button 
+      <button
         :class="{ active: activeTab === 'equipment' }"
         @click="activeTab = 'equipment'"
       >Equipment</button>
     </div>
 
     <div class="tab-content">
+      <!-- Operating Rooms Section -->
       <div v-if="activeTab === 'ors'" class="resource-section">
         <h2>Operating Rooms List</h2>
-        <button class="button-primary" @click="showAddOrForm = true" v-if="!showAddOrForm">Add New OR</button>
-
-        <!-- Add OR Form (conditionally displayed) -->
-        <AddOrForm v-if="showAddOrForm" @cancel="showAddOrForm = false" @save="handleSaveOr" />
-        
+        <button class="button-primary" @click="openOrFormForAdd" v-if="!showAddOrForm">Add New OR</button>
+        <AddOrForm
+          v-if="showAddOrForm"
+          :or-to-edit="currentOrToEdit"
+          @cancel="handleCancelOrForm"
+          @save="handleSaveOr"
+        />
         <table v-else>
           <thead>
             <tr>
@@ -39,327 +42,476 @@
             <tr v-for="or in operatingRooms" :key="or.id">
               <td>{{ or.name }}</td>
               <td>{{ or.location }}</td>
-              <td v-bind:class="'status-' + or.status.toLowerCase().replace(' ', '-')">{{ or.status }}</td>
+              <td :class="'status-' + or.status.toLowerCase().replace(' ', '-')">{{ or.status }}</td>
               <td>{{ or.primaryService }}</td>
               <td>
-                <button class="button-small">View/Edit</button>
-                <button class="button-small button-danger" @click="deleteOr(or.id)">Delete</button>
+                <button class="button-small" @click="openOrFormForEdit(or)">View/Edit</button>
+                <button class="button-small button-danger" @click="deleteOr(or)">Delete</button>  <!-- Pass the whole 'or' object -->
               </td>
             </tr>
-             <tr v-if="operatingRooms.length === 0">
-                <td colspan="5" class="no-items">No operating rooms found.</td>
+            <tr v-if="operatingRooms.length === 0">
+              <td colspan="5" class="no-items">No operating rooms found.</td>
             </tr>
           </tbody>
         </table>
       </div>
 
+      <!-- Staff Section -->
       <div v-if="activeTab === 'staff'" class="resource-section">
         <h2>Staff List</h2>
-         <button class="button-primary" @click="showAddStaffForm = true" v-if="!showAddStaffForm">Add New Staff</button>
-
-         <!-- Add Staff Form (conditionally displayed) -->
-         <AddStaffForm v-if="showAddStaffForm" @cancel="showAddStaffForm = false" @save="handleSaveStaff" />
-
-         <table v-else>
-            <thead>
-                <tr>
-                    <th scope="col">Name</th>
-                    <th scope="col">Role</th>
-                    <th scope="col">Specialization(s)</th> 
-                    <th scope="col">Status</th>
-                     <th scope="col">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="person in staff" :key="person.id">
-                    <td>{{ person.name }}</td>
-                    <td>{{ person.role }}</td>
-                    <td>{{ person.specializations.join(', ') }}</td> 
-                    <td>{{ person.status }}</td>
-                    <td>
-                        <button class="button-small">View/Edit</button>
-                        <button class="button-small button-danger" @click="deleteStaff(person.id)">Delete</button>
-                    </td>
-                </tr>
-                 <tr v-if="staff.length === 0">
-                    <td colspan="5" class="no-items">No staff found.</td>
-                </tr>
-            </tbody>
-         </table>
+        <button class="button-primary" @click="openStaffFormForAdd" v-if="!showAddStaffForm">Add New Staff</button>
+        <AddStaffForm
+          v-if="showAddStaffForm"
+          :staff-to-edit="currentStaffToEdit"
+          @cancel="handleCancelStaffForm"
+          @save="handleSaveStaff"
+        />
+        <table v-else>
+          <thead>
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Role</th>
+              <th scope="col">Specialization(s)</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="person in staff" :key="person.id">
+              <td>{{ person.name }}</td>
+              <td>{{ person.role }}</td>
+              <td>{{ person.specializations.join(', ') }}</td>
+              <td :class="'status-' + person.status.toLowerCase().replace(' ', '-')">{{ person.status }}</td>
+              <td>
+                <button class="button-small" @click="openStaffFormForEdit(person)">View/Edit</button>
+                <button class="button-small button-danger" @click="deleteStaff(person)">Delete</button> <!-- Pass the whole 'person' object -->
+              </td>
+            </tr>
+            <tr v-if="staff.length === 0">
+              <td colspan="5" class="no-items">No staff found.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
+      <!-- Equipment Section -->
       <div v-if="activeTab === 'equipment'" class="resource-section">
         <h2>Equipment List</h2>
-        <button class="button-primary" @click="showAddEquipmentForm = true" v-if="!showAddEquipmentForm">Add New Equipment</button>
-        
-        <!-- Add Equipment Form (conditionally displayed) -->
-        <AddEquipmentForm v-if="showAddEquipmentForm" @cancel="showAddEquipmentForm = false" @save="handleSaveEquipment" />
-
+        <button class="button-primary" @click="openEquipmentFormForAdd" v-if="!showAddEquipmentForm">Add New Equipment</button>
+        <AddEquipmentForm
+          v-if="showAddEquipmentForm"
+          :equipment-to-edit="currentEquipmentToEdit"
+          @cancel="handleCancelEquipmentForm"
+          @save="handleSaveEquipment"
+        />
         <table v-else>
-            <thead>
-                <tr>
-                    <th scope="col">Name/ID</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Location</th>
-                    <th scope="col">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="item in equipment" :key="item.id">
-                    <td>{{ item.name }}</td>
-                    <td>{{ item.type }}</td> 
-                    <td>{{ item.status }}</td>
-                    <td>{{ item.location }}</td>
-                    <td>
-                        <button class="button-small">View/Edit</button>
-                        <button class="button-small button-danger" @click="deleteEquipment(item.id)">Delete</button>
-                    </td>
-                </tr>
-                 <tr v-if="equipment.length === 0">
-                    <td colspan="5" class="no-items">No equipment found.</td>
-                </tr>
-            </tbody>
+          <thead>
+            <tr>
+              <th scope="col">Name/ID</th>
+              <th scope="col">Type</th>
+              <th scope="col">Status</th>
+              <th scope="col">Location</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in equipment" :key="item.id">
+              <td>{{ item.name }}</td>
+              <td>{{ item.type }}</td>
+              <td :class="'status-' + item.status.toLowerCase().replace(' ', '-')">{{ item.status }}</td>
+              <td>{{ item.location }}</td>
+              <td>
+                <button class="button-small" @click="openEquipmentFormForEdit(item)">View/Edit</button>
+                <button class="button-small button-danger" @click="deleteEquipment(item)">Delete</button> <!-- Pass the whole 'item' object -->
+              </td>
+            </tr>
+            <tr v-if="equipment.length === 0">
+              <td colspan="5" class="no-items">No equipment found.</td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </div>
+
+    <!-- Confirmation Modal -->
+    <ConfirmationModal
+      v-if="showConfirmationModal"
+      :title="confirmationTitle"
+      :message="confirmationMessage"
+      @confirm="handleConfirmDelete"
+      @cancel="handleCancelDelete"
+    />
+
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue';
-import AddOrForm from './AddOrForm.vue'; 
-import AddStaffForm from './AddStaffForm.vue'; 
-import AddEquipmentForm from './AddEquipmentForm.vue'; 
+import { useToast } from 'vue-toastification'; // Add this import
+import AddOrForm from './AddOrForm.vue';
+import AddStaffForm from './AddStaffForm.vue';
+import AddEquipmentForm from './AddEquipmentForm.vue';
+import ConfirmationModal from './ConfirmationModal.vue'; // Added import
 
+const toast = useToast(); // Initialize useToast
 const activeTab = ref('ors'); // Default active tab
-const showAddOrForm = ref(false); // State to control OR form visibility
-const showAddStaffForm = ref(false); // State to control Staff form visibility
-const showAddEquipmentForm = ref(false); // State to control Equipment form visibility
 
-// Simulated data for resources
+// --- Confirmation Modal State & Logic ---
+const showConfirmationModal = ref(false);
+const itemToDelete = ref(null);
+const itemTypeToDelete = ref(''); // 'or', 'staff', 'equipment'
+const confirmationTitle = ref('Confirm Deletion');
+const confirmationMessage = ref('Are you sure you want to delete this item? This action cannot be undone.');
+
+const openConfirmationModal = (item, type, title, message) => {
+  itemToDelete.value = item;
+  itemTypeToDelete.value = type;
+  confirmationTitle.value = title || 'Confirm Deletion';
+  confirmationMessage.value = message || 'Are you sure you want to delete this item? This action cannot be undone.';
+  showConfirmationModal.value = true;
+};
+
+const handleConfirmDelete = async () => { // Make the function async
+  if (!itemToDelete.value || !itemTypeToDelete.value) return;
+
+  const item = itemToDelete.value;
+  const type = itemTypeToDelete.value;
+  const itemName = item.name; // Get item name before potential deletion
+  const itemTypeDisplay = type.charAt(0).toUpperCase() + type.slice(1);
+
+  // Simulate API call
+  try {
+    // Simulate a delay and potential failure
+    await new Promise((resolve, reject) => {
+      setTimeout(() => {
+        // Randomly succeed or fail for demonstration purposes
+        if (Math.random() > 0.2) { // 80% chance of success
+          resolve({ success: true });
+        } else {
+          reject(new Error('Simulated backend error'));
+        }
+      }, 1000); // 1 second delay
+    });
+
+    // If successful, update the local array
+    if (type === 'or') {
+      operatingRooms.value = operatingRooms.value.filter(or => or.id !== item.id);
+    } else if (type === 'staff') {
+      staff.value = staff.value.filter(s => s.id !== item.id);
+    } else if (type === 'equipment') {
+      equipment.value = equipment.value.filter(e => e.id !== item.id);
+    }
+    console.log(`Deleted ${type}:`, item);
+    toast.success(`${itemTypeDisplay} '${itemName}' deleted successfully!`);
+
+  } catch (error) {
+    console.error(`Failed to delete ${type}:`, item, error);
+    toast.error(`Failed to delete ${itemTypeDisplay} '${itemName}'. Please try again.`);
+  }
+
+  handleCancelDelete(); // Close modal and reset state regardless of outcome
+};
+
+const handleCancelDelete = () => {
+  showConfirmationModal.value = false;
+  itemToDelete.value = null;
+  itemTypeToDelete.value = '';
+  confirmationTitle.value = 'Confirm Deletion'; // Reset to default
+  confirmationMessage.value = 'Are you sure you want to delete this item? This action cannot be undone.'; // Reset to default
+};
+
+// --- OR Management State & Logic ---
+const showAddOrForm = ref(false);
+const currentOrToEdit = ref(null);
 const operatingRooms = ref([
-    { id: 1, name: 'OR 1', location: 'Main Building, 2nd Floor', status: 'Active', primaryService: 'General Surgery' },
-    { id: 2, name: 'OR 2', location: 'Main Building, 2nd Floor', status: 'Active', primaryService: 'Orthopedics' },
-    { id: 3, name: 'OR 3', location: 'Main Building, 3rd Floor', status: 'Under Maintenance', primaryService: 'Cardiac Surgery' },
+  { id: 1, name: 'OR 1', location: 'Main Building, 2nd Floor', status: 'Active', primaryService: 'General Surgery' },
+  { id: 2, name: 'OR 2', location: 'Main Building, 2nd Floor', status: 'Active', primaryService: 'Orthopedics' },
+  { id: 3, name: 'OR 3', location: 'Main Building, 3rd Floor', status: 'Under Maintenance', primaryService: 'Cardiac Surgery' },
 ]);
 
+const openOrFormForAdd = () => {
+  currentOrToEdit.value = null;
+  showAddOrForm.value = true;
+};
+const openOrFormForEdit = (or) => {
+  currentOrToEdit.value = { ...or };
+  showAddOrForm.value = true;
+};
+const handleCancelOrForm = () => {
+  showAddOrForm.value = false;
+  currentOrToEdit.value = null;
+};
+const handleSaveOr = (orData) => {
+  if (currentOrToEdit.value) {
+    // Editing existing OR
+    const index = operatingRooms.value.findIndex(or => or.id === orData.id);
+    if (index !== -1) {
+      operatingRooms.value[index] = { ...operatingRooms.value[index], ...orData };
+      toast.success(`Operating Room '${orData.name}' updated successfully!`); // Add this line
+    }
+  } else {
+    // Adding new OR
+    const newOr = {
+      id: Date.now().toString(), // Simple unique ID generator
+      ...orData,
+    };
+    operatingRooms.value.push(newOr);
+    toast.success(`Operating Room '${orData.name}' added successfully!`); // Add this line
+  }
+  showAddOrForm.value = false;
+  currentOrToEdit.value = null;
+};
+const deleteOr = (orItem) => {
+  openConfirmationModal(
+    orItem,
+    'or',
+    'Delete Operating Room?',
+    `Are you sure you want to delete the operating room "${orItem.name}"? This action cannot be undone.`
+  );
+};
+
+// --- Staff Management State & Logic ---
+const showAddStaffForm = ref(false);
+const currentStaffToEdit = ref(null);
 const staff = ref([
-    { id: 101, name: 'Dr. Jane Smith', role: 'Surgeon', specializations: ['Orthopedics', 'Sports Medicine'], status: 'Active' },
-    { id: 102, name: 'Nurse John Doe', role: 'Scrub Nurse', specializations: ['General Surgery'], status: 'Active' },
-    { id: 103, name: 'Dr. Emily Carter', role: 'Anesthetist', specializations: [], status: 'On Leave' },
+  { id: 101, name: 'Dr. Jane Smith', role: 'Surgeon', specializations: ['Orthopedics', 'Sports Medicine'], status: 'Active' },
+  { id: 102, name: 'Nurse John Doe', role: 'Scrub Nurse', specializations: ['General Surgery'], status: 'Active' },
+  { id: 103, name: 'Dr. Emily Carter', role: 'Anesthetist', specializations: [], status: 'On Leave' },
 ]);
 
+const openStaffFormForAdd = () => {
+  currentStaffToEdit.value = null;
+  showAddStaffForm.value = true;
+};
+const openStaffFormForEdit = (staffMember) => {
+  currentStaffToEdit.value = { ...staffMember };
+  showAddStaffForm.value = true;
+};
+const handleCancelStaffForm = () => {
+  showAddStaffForm.value = false;
+  currentStaffToEdit.value = null;
+};
+const handleSaveStaff = (staffData) => {
+  if (currentStaffToEdit.value) {
+    // Editing existing staff
+    const index = staff.value.findIndex(s => s.id === staffData.id);
+    if (index !== -1) {
+      staff.value[index] = { ...staff.value[index], ...staffData };
+      toast.success(`Staff member '${staffData.name}' updated successfully!`); // Add this line
+    }
+  } else {
+    // Adding new staff
+    const newStaff = {
+      id: Date.now().toString(), // Simple unique ID generator
+      ...staffData,
+    };
+    staff.value.push(newStaff);
+    toast.success(`Staff member '${staffData.name}' added successfully!`); // Add this line
+  }
+  showAddStaffForm.value = false;
+  currentStaffToEdit.value = null;
+};
+const deleteStaff = (staffItem) => {
+  openConfirmationModal(
+    staffItem,
+    'staff',
+    'Delete Staff Member?',
+    `Are you sure you want to delete staff member "${staffItem.name}"? This action cannot be undone.`
+  );
+};
+
+// --- Equipment Management State & Logic ---
+const showAddEquipmentForm = ref(false);
+const currentEquipmentToEdit = ref(null); // Added for equipment editing
 const equipment = ref([
-    { id: 201, name: 'C-Arm Unit 1', type: 'C-Arm', status: 'Available', location: 'Storage Room A' },
-    { id: 202, name: 'Anesthesia Machine B', type: 'Anesthesia Machine', status: 'In Use', location: 'OR 2' },
-    { id: 203, name: 'Microscope Model X', type: 'Surgical Microscope', status: 'Available', location: 'Storage Room B' },
+  { id: 201, name: 'C-Arm Unit 1', type: 'C-Arm', status: 'Available', location: 'Storage Room A' },
+  { id: 202, name: 'Anesthesia Machine B', type: 'Anesthesia Machine', status: 'In Use', location: 'OR 2' },
+  { id: 203, name: 'Microscope Model X', type: 'Surgical Microscope', status: 'Available', location: 'Storage Room B' },
 ]);
 
-// --- OR Management Logic ---
-const handleSaveOr = (newOrData) => {
-    console.log('Received new OR data:', newOrData);
-    // Simulate adding to the list
-    const newId = operatingRooms.value.length > 0 ? Math.max(...operatingRooms.value.map(or => or.id)) + 1 : 1;
-    operatingRooms.value.push({ id: newId, ...newOrData });
-    showAddOrForm.value = false; // Hide the form after save
+const openEquipmentFormForAdd = () => {
+  currentEquipmentToEdit.value = null;
+  showAddEquipmentForm.value = true;
 };
 
-// Placeholder methods for View/Edit and Delete
-const viewEditOr = (or) => {
-    console.log('Viewing/Editing OR:', or);
-    // In a real app, navigate to an edit form or open a modal
+const openEquipmentFormForEdit = (equipmentItem) => {
+  currentEquipmentToEdit.value = { ...equipmentItem };
+  showAddEquipmentForm.value = true;
 };
 
-const deleteOr = (orId) => {
-    console.log('Attempting to delete OR with ID:', orId);
-    // Simulate deletion from the list
-    operatingRooms.value = operatingRooms.value.filter(or => or.id !== orId);
-};
-// --------------------------
-
-// --- Staff Management Logic ---
-const handleSaveStaff = (newStaffData) => {
-     console.log('Received new Staff data:', newStaffData);
-    // Simulate adding to the list
-    const newId = staff.value.length > 0 ? Math.max(...staff.value.map(person => person.id)) + 1 : 101;
-    staff.value.push({ id: newId, ...newStaffData });
-    showAddStaffForm.value = false; // Hide the form after save
+const handleCancelEquipmentForm = () => {
+  showAddEquipmentForm.value = false;
+  currentEquipmentToEdit.value = null;
 };
 
-// Placeholder methods for View/Edit and Delete staff
-const viewEditStaff = (person) => {
-     console.log('Viewing/Editing Staff:', person);
-     // In a real app, navigate to an edit form or open a modal
+const handleSaveEquipment = (equipmentData) => {
+  if (currentEquipmentToEdit.value) {
+    // Editing existing equipment
+    const index = equipment.value.findIndex(eq => eq.id === equipmentData.id);
+    if (index !== -1) {
+      equipment.value[index] = { ...equipment.value[index], ...equipmentData };
+      toast.success(`Equipment '${equipmentData.name}' updated successfully!`); // Add this line
+    }
+  } else {
+    // Adding new equipment
+    const newEquipment = {
+      id: Date.now().toString(), // Simple unique ID generator
+      ...equipmentData,
+    };
+    equipment.value.push(newEquipment);
+    toast.success(`Equipment '${equipmentData.name}' added successfully!`); // Add this line
+  }
+  showAddEquipmentForm.value = false;
+  currentEquipmentToEdit.value = null;
 };
 
-const deleteStaff = (personId) => {
-     console.log('Attempting to delete Staff with ID:', personId);
-     // Simulate deletion from the list
-     staff.value = staff.value.filter(person => person.id !== personId);
-};
-// ----------------------------
-
-// --- Equipment Management Logic ---
-const handleSaveEquipment = (newEquipmentData) => {
-     console.log('Received new Equipment data:', newEquipmentData);
-    // Simulate adding to the list
-    const newId = equipment.value.length > 0 ? Math.max(...equipment.value.map(item => item.id)) + 1 : 201;
-    equipment.value.push({ id: newId, ...newEquipmentData });
-    showAddEquipmentForm.value = false; // Hide the form after save
+const deleteEquipment = (equipmentItem) => {
+  openConfirmationModal(
+    equipmentItem,
+    'equipment',
+    'Delete Equipment?',
+    `Are you sure you want to delete equipment "${equipmentItem.name}"? This action cannot be undone.`
+  );
 };
 
-const viewEditEquipment = (item) => {
-     console.log('Viewing/Editing Equipment:', item);
-     // In a real app, navigate to an edit form or open a modal
-};
+// Removed duplicate deleteEquipment function
 
-const deleteEquipment = (itemId) => {
-     console.log('Attempting to delete Equipment with ID:', itemId);
-     // Simulate deletion from the list
-     equipment.value = equipment.value.filter(item => item.id !== itemId);
-};
-// ----------------------------------
+// TODO: Add backend integration for all CRUD operations
+// TODO: Add form validation to all forms
+// TODO: Improve UI/UX (e.g., loading states, success/error notifications)
 
 </script>
 
 <style scoped>
 .resource-management-container {
   padding: 20px;
+  font-family: sans-serif;
 }
 
 .tabs {
   display: flex;
   margin-bottom: 20px;
-  border-bottom: 2px solid var(--color-mid-light-gray);
+  border-bottom: 1px solid #ccc;
 }
 
 .tabs button {
-  padding: 10px 15px;
+  padding: 10px 20px;
+  cursor: pointer;
   border: none;
   background-color: transparent;
-  cursor: pointer;
-  font-size: 1em;
-  color: var(--color-dark-gray);
-  transition: color 0.2s ease, border-bottom-color 0.2s ease;
-  border-bottom: 2px solid transparent; /* For active state underline */
-  margin-right: 10px; /* Space between tabs */
-}
-
-.tabs button:hover {
-  color: var(--color-very-dark-gray);
+  font-size: 16px;
+  border-bottom: 3px solid transparent; /* For active state */
+  margin-bottom: -1px; /* Align with container's border */
 }
 
 .tabs button.active {
-  color: var(--color-primary-dark); /* Darker primary for active tab text */
-  border-bottom-color: var(--color-primary); /* Primary color underline for active tab */
+  border-bottom: 3px solid #007bff;
+  color: #007bff;
   font-weight: bold;
 }
 
-.tab-content {
-  /* Styling for content area if needed */
+.tab-content .resource-section {
+  margin-bottom: 30px;
 }
 
 .resource-section h2 {
-    font-size: 1.2em;
-    margin-top: 15px;
-    margin-bottom: 10px;
-     border-bottom: 1px solid var(--color-light-gray); /* Separator below sub-heading */
-     padding-bottom: 5px;
+  margin-bottom: 15px;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
 }
 
-.resource-section button.button-primary {
-    margin-bottom: 15px; /* Space below add button */
+.button-primary {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 15px; /* Space before the table or form */
+}
+
+.button-primary:hover {
+  background-color: #0056b3;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 15px; /* Space below add button or form */
-  background-color: var(--color-white);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--color-mid-light-gray);
+  margin-top: 15px;
 }
 
-thead tr {
-  background-color: var(--color-light-gray);
-  border-bottom: 1px solid var(--color-mid-light-gray);
+tr:nth-child(even) {
+    background-color: #f8f9fa;
 }
 
-th,
-td {
-  padding: 10px 15px; /* Slightly reduced padding */
+th, td {
+  border: 1px solid #ddd;
+  padding: 10px;
   text-align: left;
-  border-bottom: 1px solid var(--color-mid-light-gray);
 }
 
 th {
-  font-weight: 600;
-  color: var(--color-very-dark-gray);
-  font-size: 0.95em;
+  background-color: #e9ecef;
+  color: #495057;
+  font-weight: bold;
 }
-
-tbody tr:nth-child(even) {
-  background-color: var(--color-light-gray); /* Zebra striping */
-}
-
-tbody tr:hover {
-  background-color: #e9f5fe; /* Light blue hover effect */
-}
-
-.resource-section:nth-of-type(2) tbody tr:hover { /* Targeting Staff table */
-  background-color: #e9f5fe; /* Light blue hover effect */
-}
-
-.resource-section:nth-of-type(3) tbody tr:hover { /* Targeting Equipment table */
-  background-color: #e9f5fe; /* Light blue hover effect */
-}
-
-td:last-child { /* Target the Actions column */
-    white-space: nowrap; /* Prevent buttons from wrapping */
-}
-
 
 .button-small {
-     padding: 5px 10px; /* Defined small button style */
-     font-size: 0.85em;
-     margin-right: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  margin-right: 5px;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background-color: #f8f9fa;
+}
+
+.button-small:hover {
+  background-color: #e2e6ea;
 }
 
 .button-danger {
-    background-color: var(--color-danger);
+  background-color: #dc3545;
+  color: white;
+  border-color: #dc3545;
 }
 
 .button-danger:hover {
-    background-color: #c82333;
+  background-color: #c82333;
+  border-color: #bd2130;
 }
 
 .no-items {
-    font-style: italic;
-    color: var(--color-dark-gray);
- text-align: center;
-    background-color: var(--color-light-gray); /* Subtle background color */
+    text-align: center;
+    color: #6c757d;
     padding: 20px;
+    font-style: italic;
 }
 
-.status-active {
-    color: var(--color-success); /* Green for active/available */
-    font-weight: bold;
-}
-
-.status-under-maintenance,
-.status-in-use {
-    color: var(--color-warning); /* Orange for in-use/under maintenance */
-    font-weight: bold;
-}
-
+/* Status-specific styling */
+.status-active,
 .status-available {
-     color: var(--color-success); /* Green for active/available */
-     font-weight: normal; /* Slightly less bold than active if needed */
+  color: #28a745; /* Green */
+  font-weight: bold;
 }
 
-.status-on-leave {
-    color: var(--color-danger); /* Red for on leave */
+.status-under-maintenance {
+  color: #ffc107; /* Yellow */
+  font-weight: bold;
+}
+
+.status-inactive,
+.status-on-leave,
+.status-retired {
+  color: #dc3545; /* Red */
+  font-weight: bold;
+}
+
+.status-in-use {
+    color: #fd7e14; /* Orange */
     font-weight: bold;
 }
+
 </style>

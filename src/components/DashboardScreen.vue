@@ -19,7 +19,7 @@
             <button class="button-secondary" @click="runOptimization">Run Optimization</button>
           </div>
         </div>
-        
+
         <!-- Key Performance Indicators (KPIs) Widget -->
         <div class="widget kpis-widget">
           <h2>Key Performance Indicators</h2>
@@ -48,7 +48,7 @@
         <!-- Today's OR Schedule Overview Widget -->
         <div class="widget schedule-overview-widget">
           <h2>Today's OR Schedule Overview</h2>
-          <!-- Placeholder for compact timeline/Gantt view or simple list -->       
+          <!-- Placeholder for compact timeline/Gantt view or simple list -->
           <ul v-if="todaySchedule.length > 0" class="schedule-list">
             <li v-for="surgery in todaySchedule" :key="surgery.id">{{ surgery.time }} - OR {{ surgery.or }}: {{ surgery.description }}</li>
           </ul>
@@ -137,7 +137,7 @@ const pendingSurgeries = ref([
 const scheduleNewSurgery = () => {
   console.log('Navigate to Schedule New Surgery form');
   // In a real app, navigate to the surgery creation page/modal
-  // router.push({ name: 'CreateSurgery' }); 
+  // router.push({ name: 'CreateSurgery' });
 };
 
 const addEmergencyCase = () => {
@@ -342,8 +342,8 @@ onMounted(() => {
   color: var(--color-dark-gray);
 }
 
-.alerts-widget ul, 
-.sdst-conflicts-widget ul, 
+.alerts-widget ul,
+.sdst-conflicts-widget ul,
 .pending-surgeries-widget ul,
 .schedule-overview-widget ul {
   list-style: none;
@@ -386,7 +386,7 @@ onMounted(() => {
   color: var(--color-mid-gray);
   font-style: italic;
 }
- 
+
 .loading-message {
   font-size: 1.2em;
   color: var(--color-dark-gray);
@@ -407,5 +407,72 @@ onMounted(() => {
   font-weight: 500;
   border-left: 5px solid var(--color-warning);
   padding-left: 15px; /* Add space for the border */
+}
+</style>
+
+<template>
+  <div class="dashboard-screen">
+    <h1>Dashboard</h1>
+    <p>Welcome to the Surgery Scheduling Application Dashboard!</p>
+
+    <div class="dashboard-widgets">
+      <div class="widget">
+        <h2>Upcoming Surgeries</h2>
+        <p><em>(Widget content for upcoming surgeries will go here)</em></p>
+      </div>
+      <div class="widget">
+        <h2>Resource Availability</h2>
+        <p><em>(Widget content for resource availability will go here)</em></p>
+      </div>
+      <div class="widget">
+        <h2>System Alerts</h2>
+        <p><em>(Widget content for system alerts will go here)</em></p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+// No script logic needed for this basic placeholder yet
+</script>
+
+<style scoped>
+.dashboard-screen {
+  padding: 20px;
+  background-color: #f9f9f9; /* Light background for the content area */
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-screen h1 {
+  color: var(--color-text-primary, #333);
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--color-primary, #4A90E2);
+  padding-bottom: 10px;
+}
+
+.dashboard-widgets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.widget {
+  background-color: var(--color-surface, #fff);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+.widget h2 {
+  color: var(--color-primary-dark, #357ABD);
+  font-size: 1.2em;
+  margin-bottom: 10px;
+}
+
+.widget p {
+  color: var(--color-text-secondary, #555);
+  font-style: italic;
 }
 </style>

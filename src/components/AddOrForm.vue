@@ -1,34 +1,38 @@
 <template>
   <div class="add-or-form">
-    <h3>Add New Operating Room</h3>
+    <h3>{{ formTitle }}</h3>
     <form @submit.prevent="handleSubmit">
       <div class="input-group">
         <label for="or-name">Name/ID</label>
-        <input type="text" id="or-name" v-model="orData.name" required>
+        <input type="text" id="or-name" v-model="orData.name" @input="clearError('name')">
+        <span v-if="errors.name" class="error-message">{{ errors.name }}</span>
       </div>
 
       <div class="input-group">
         <label for="or-location">Location</label>
         <input type="text" id="or-location" v-model="orData.location">
+        <!-- No validation for location in this example, but can be added -->
       </div>
 
       <div class="input-group">
         <label for="or-status">Status</label>
-        <select id="or-status" v-model="orData.status" required>
+        <select id="or-status" v-model="orData.status" @change="clearError('status')">
           <option value="">Select Status</option>
           <option value="Active">Active</option>
           <option value="Under Maintenance">Under Maintenance</option>
           <option value="Inactive">Inactive</option>
         </select>
+        <span v-if="errors.status" class="error-message">{{ errors.status }}</span>
       </div>
 
       <div class="input-group">
         <label for="or-service">Primary Service</label>
         <input type="text" id="or-service" v-model="orData.primaryService">
+        <!-- No validation for primary service in this example, but can be added -->
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="button-primary">Save OR</button>
+        <button type="submit" class="button-primary">{{ submitButtonText }}</button>
         <button type="button" class="button-secondary" @click="handleCancel">Cancel</button>
       </div>
     </form>
@@ -36,32 +40,90 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch, computed } from 'vue';
 
-// Define initial form data structure
+const props = defineProps({
+  orToEdit: {
+    type: Object,
+    default: null
+  }
+});
+
+const emit = defineEmits(['save', 'cancel']);
+
 const orData = ref({
+  id: null,
   name: '',
   location: '',
   status: '',
   primaryService: '',
 });
 
+const errors = ref({ // Added for validation errors
+  name: '',
+  status: ''
+});
+
+const isEditMode = computed(() => !!props.orToEdit);
+const formTitle = computed(() => isEditMode.value ? 'Edit Operating Room' : 'Add New Operating Room');
+const submitButtonText = computed(() => isEditMode.value ? 'Update OR' : 'Save OR');
+
+watch(() => props.orToEdit, (newOr) => {
+  if (newOr) {
+    orData.value = { ...newOr };
+  } else {
+    orData.value = { id: null, name: '', location: '', status: '', primaryService: '' };
+  }
+  clearAllErrors(); // Clear errors when form data changes (e.g. switching to add/edit)
+}, { immediate: true });
+
+const validateForm = () => {
+  let isValid = true;
+  errors.value = { name: '', status: '' }; // Reset errors
+
+  if (!orData.value.name.trim()) {
+    errors.value.name = 'Name/ID is required.';
+    isValid = false;
+  }
+  if (!orData.value.status) {
+    errors.value.status = 'Status is required.';
+    isValid = false;
+  }
+  return isValid;
+};
+
+const clearError = (field) => {
+  if (errors.value[field]) {
+    errors.value[field] = '';
+  }
+};
+
+const clearAllErrors = () => {
+  errors.value = { name: '', status: '' };
+};
+
 const handleSubmit = () => {
-  console.log('Submitting OR data:', orData.value);
-  // Placeholder for sending data to backend or parent component
-  // After successful save, reset form and close/hide form
+  if (!validateForm()) {
+    return; // Stop submission if validation fails
+  }
+
+  if (isEditMode.value) {
+    console.log('Updating OR data:', orData.value);
+    emit('save', { ...orData.value, isUpdate: true });
+  } else {
+    console.log('Submitting new OR data:', orData.value);
+    const newOrPayload = { ...orData.value, id: orData.value.id || Date.now().toString() };
+    emit('save', newOrPayload);
+  }
+  clearAllErrors(); // Clear errors on successful submission
 };
 
 const handleCancel = () => {
   console.log('Cancelling OR form');
-  // Placeholder for resetting form and closing/hiding form
-  orData.value = { name: '', location: '', status: '', primaryService: '' }; // Reset form
-  // Emit an event to parent to indicate cancellation
-  // emit('cancel'); 
+  orData.value = { id: null, name: '', location: '', status: '', primaryService: '' };
+  clearAllErrors(); // Clear errors on cancel
+  emit('cancel');
 };
-
-// Define emits if using events to communicate with parent
-// const emit = defineEmits(['save', 'cancel']);
 
 </script>
 
@@ -108,6 +170,18 @@ const handleCancel = () => {
   font-size: 1em;
   color: var(--color-very-dark-gray);
   background-color: var(--color-white);
+}
+
+.error-message {
+  display: block;
+  color: var(--color-danger);
+  font-size: 0.8em;
+  margin-top: 4px;
+}
+
+.input-group input.invalid,
+.input-group select.invalid {
+  border-color: var(--color-danger);
 }
 
 .input-group input:focus,
