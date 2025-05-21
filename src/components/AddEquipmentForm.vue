@@ -64,6 +64,17 @@ const initialEquipmentData = () => ({
 const equipmentData = ref(initialEquipmentData());
 const errors = ref({}); // Added for validation errors
 
+// Functions to clear errors
+const clearError = (field) => {
+  if (errors.value[field]) {
+    errors.value[field] = '';
+  }
+};
+
+const clearAllErrors = () => {
+  errors.value = {};
+};
+
 // Define emits to communicate with parent
 const emit = defineEmits(['save', 'cancel']);
 
@@ -83,16 +94,6 @@ watch(() => props.equipmentToEdit, (newVal) => {
     equipmentData.value = initialEquipmentData();
   }
 }, { immediate: true }); // immediate: true to run on component mount if prop is initially set
-
-const clearError = (field) => {
-  if (errors.value[field]) {
-    errors.value[field] = '';
-  }
-};
-
-const clearAllErrors = () => {
-  errors.value = {};
-};
 
 const validateForm = () => {
   clearAllErrors();

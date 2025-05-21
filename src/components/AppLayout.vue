@@ -49,7 +49,8 @@
       <!-- Router View renders the specific page component -->
       <router-view />
     </main>
-    <Toast /> <!-- Toast component for notifications -->
+    <!-- Toast notifications are typically triggered programmatically, not placed as a component here -->
+    <!-- Toasts will be rendered by the plugin at the root level -->
   </div>
 </template>
 
@@ -57,7 +58,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { setAuthenticated } from '../router'; // Assuming this path is correct
-import Toast from 'vue-toastification'; // Import Toast component
+import { useToast } from 'vue-toastification';
 
 const router = useRouter();
 

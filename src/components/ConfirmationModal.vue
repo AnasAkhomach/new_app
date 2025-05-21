@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-overlay" @click.self="handleCancel">
+  <div class="modal-overlay" v-if="show" @click.self="handleCancel">
     <div class="modal-content">
       <h3>{{ title || 'Confirm Action' }}</h3>
       <div class="modal-body">
@@ -18,6 +18,7 @@
 import { defineProps, defineEmits } from 'vue';
 
 const props = defineProps({
+  show: { type: Boolean, default: false }, // Added show prop
   title: { type: String, default: 'Confirm Action' },
   message: { type: String, default: 'Are you sure you want to perform this action?' },
 });

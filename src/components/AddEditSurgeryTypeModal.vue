@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-overlay" @click.self="handleCancel">
+  <div class="modal-overlay" v-if="show" @click.self="handleCancel">
     <div class="modal-content">
       <h3>{{ isEditing ? 'Edit Surgery Type' : 'Add New Surgery Type' }}</h3>
       <form @submit.prevent="handleSubmit">
@@ -32,6 +32,7 @@ import { ref, watch } from 'vue';
 
 // Define props to receive initial data for editing and a flag for edit mode
 const props = defineProps({
+  show: { type: Boolean, default: false }, // Added show prop
   initialData: { type: Object, default: null }, // Data for the type being edited
   isEditing: { type: Boolean, default: false },
 });

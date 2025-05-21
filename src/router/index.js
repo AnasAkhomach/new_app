@@ -13,6 +13,7 @@ import NotificationsScreen from '../components/NotificationsScreen.vue';
 import AdministrationScreen from '../components/AdministrationScreen.vue';
 import MyProfileSettingsScreen from '../components/MyProfileSettingsScreen.vue';
 import HelpDocumentationScreen from '../components/HelpDocumentationScreen.vue';
+import NotFound from '../components/NotFound.vue'; // Import the new NotFound component
 
 // Simple authentication state (for simulation)
 const isAuthenticated = ref(false);
@@ -89,8 +90,8 @@ const routes = [
   {
     path: '/:pathMatch(.*)*', // Catch-all route
     name: 'NotFound',
-    // You would typically have a 404 component here
-    component: { template: '<div>404 Not Found</div>' }
+    // Use the imported 404 component
+    component: NotFound
   }
 ];
 

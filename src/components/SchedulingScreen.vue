@@ -54,7 +54,7 @@
                         <!-- TODO: Add action to schedule directly if applicable -->
                     </div>
                 </li>
-                 <li v-if="filteredPendingSurgeries.length === 0" class="no-items">No pending surgeries matching filters.</li>
+                 <li v-if="filteredPendingSurgeries && filteredPendingSurgeries.length === 0" class="no-items">No pending surgeries matching filters.</li>
             </ul>
         </div>
       </aside>
@@ -166,7 +166,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'; // Added watch
+import { ref, computed, onMounted, watch } from 'vue';
 
 // --- State ---
 const pendingSurgeries = ref([]);
@@ -189,6 +189,19 @@ const isGanttInitialized = ref(false); // To track if the Gantt library is loade
 // --- Data for Gantt Chart (to be passed as props or managed by the Gantt library wrapper) ---
 const ganttTasks = ref([]); // Holds tasks formatted for the Gantt library
 const ganttResources = ref([]); // Holds resources (ORs, Surgeons, Staff, Equipment)
+
+// --- Computed Properties ---
+const filteredPendingSurgeries = computed(() => {
+  if (!pendingSurgeries.value) return []; // Ensure pendingSurgeries.value is not null or undefined
+
+  return pendingSurgeries.value.filter(surgery => {
+    const matchesPriority = !filters.value.priority || surgery.priority === filters.value.priority;
+    const matchesSpecialty = !filters.value.specialty || (surgery.requiredSpecialty && surgery.requiredSpecialty.toLowerCase().includes(filters.value.specialty.toLowerCase()));
+    const matchesStatus = !filters.value.status || surgery.status === filters.value.status;
+    // TODO: Add logic for other filters
+    return matchesPriority && matchesSpecialty && matchesStatus;
+  });
+});
 
 // --- Methods ---
 
@@ -386,6 +399,25 @@ const nextDateRange = () => {
 
 // TODO: Add methods for interacting with the Gantt chart library once integrated
 // (e.g., handling item resize, move, click events from the chart itself)
+
+// Initial data fetch on component mount
+onMounted(() => {
+  fetchInitialData();
+});
+
+// Renamed handleDropOnSchedule to handleDropOnGantt for clarity as per template
+const handleDropOnGantt = handleDropOnSchedule;
+
+// Placeholder functions for Gantt chart controls
+const ganttNavigate = (direction) => {
+    console.log('Gantt navigation attempted:', direction);
+    // TODO: Implement actual Gantt navigation
+};
+
+const ganttZoom = (level) => {
+     console.log('Gantt zoom attempted:', level);
+    // TODO: Implement actual Gantt zoom
+};
 
 </script>
 

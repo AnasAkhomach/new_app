@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-overlay" @click.self="handleCancel">
+  <div class="modal-overlay" v-if="show" @click.self="handleCancel">
     <div class="modal-content">
       <h3>{{ isEditing ? 'Edit Initial Setup Time' : 'Add New Initial Setup Time' }}</h3>
       <form @submit.prevent="handleSubmit">
@@ -35,6 +35,7 @@ import { ref, watch } from 'vue';
 
 // Define props to receive initial data for editing, editing flag, and the list of surgery types
 const props = defineProps({
+  show: { type: Boolean, default: false }, // Added show prop
   initialData: { type: Object, default: null }, // Data for the setup time being edited
   isEditing: { type: Boolean, default: false },
   surgeryTypes: { type: Array, required: true }, // List of surgery types to populate dropdown
