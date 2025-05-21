@@ -6,8 +6,10 @@
         <img src="/public/vite.svg" alt="App Logo" class="app-logo">
         <h1>Surgery Scheduling System</h1>
       </header>
-      <h2 class="form-title">Login</h2>
-      <form class="login-form" @submit.prevent="handleLogin">
+      <h2 class="form-title">{{ isRegistering ? 'Create Account' : 'Login' }}</h2>
+
+      <!-- Login Form -->
+      <form v-if="!isRegistering" class="login-form" @submit.prevent="handleLogin">
         <div class="input-group">
           <label for="username">Username</label>
           <input type="text" id="username" name="username" v-model="username" required>
@@ -18,10 +20,36 @@
           <!-- Password visibility toggle could be added later -->
         </div>
         <button type="submit" class="login-button">Login</button>
+        <p class="toggle-form-link">
+          Don't have an account? <a href="#" @click.prevent="toggleForm">Create one</a>
+        </p>
         <!-- Forgot password link only if FR-AUTH-005 is implemented, included for now -->
         <a href="#" class="forgot-password-link">Forgot Password?</a>
       </form>
-      <p v-if="loginError" class="error-message">{{ loginError }}</p>
+
+      <!-- Registration Form -->
+      <form v-if="isRegistering" class="login-form" @submit.prevent="handleRegister">
+        <div class="input-group">
+          <label for="new-username">Username</label>
+          <input type="text" id="new-username" v-model="newUsername" required>
+        </div>
+        <div class="input-group">
+          <label for="new-password">Password</label>
+          <input type="password" id="new-password" v-model="newPassword" required>
+        </div>
+        <div class="input-group">
+          <label for="confirm-password">Confirm Password</label>
+          <input type="password" id="confirm-password" v-model="confirmPassword" required>
+        </div>
+        <button type="submit" class="login-button">Create Account</button>
+        <p class="toggle-form-link">
+          Already have an account? <a href="#" @click.prevent="toggleForm">Login</a>
+        </p>
+      </form>
+
+      <p v-if="loginError && !isRegistering" class="error-message">{{ loginError }}</p>
+      <p v-if="registrationError && isRegistering" class="error-message">{{ registrationError }}</p>
+      <p v-if="registrationSuccess && !isRegistering" class="success-message">{{ registrationSuccess }}</p>
       <!-- Optional Footer -->
       <footer class="app-footer">
         <p>&copy; 2023 Your Organization. All rights reserved.</p>
@@ -40,6 +68,23 @@ const router = useRouter(); // Get router instance
 const username = ref('');
 const password = ref('');
 const loginError = ref('');
+const registrationError = ref('');
+const registrationSuccess = ref('');
+
+const isRegistering = ref(false);
+const newUsername = ref('');
+const newPassword = ref('');
+const confirmPassword = ref('');
+
+// Simulated user store (using localStorage)
+const getUsers = () => {
+  const users = localStorage.getItem('users');
+  return users ? JSON.parse(users) : [];
+};
+
+const saveUsers = (users) => {
+  localStorage.setItem('users', JSON.stringify(users));
+};
 
 const handleLogin = () => {
   loginError.value = ''; // Clear previous errors
@@ -56,15 +101,62 @@ const handleLogin = () => {
   // In a real app, you would send a request to your backend here.
   // On successful response:
 
-  // Simulate success for any non-empty username/password
-  setAuthenticated(true); // Set the global auth state to true
-  router.push({ name: 'Dashboard' }); // Navigate to the dashboard route
+  // --- Simulated Login Logic ---
+  const users = getUsers();
+  const user = users.find(u => u.username === username.value && u.password === password.value);
 
-  // On failed response:
-  // loginError.value = 'Login failed. Please check your credentials.';
-  // setAuthenticated(false);
+  if (user) {
+    setAuthenticated(true);
+    router.push({ name: 'Dashboard' });
+  } else {
+    loginError.value = 'Invalid username or password.';
+    setAuthenticated(false);
+  }
   // ------------------------------
+};
 
+const handleRegister = () => {
+  loginError.value = '';
+  registrationError.value = '';
+  registrationSuccess.value = '';
+
+  if (!newUsername.value || !newPassword.value || !confirmPassword.value) {
+    registrationError.value = 'Please fill in all fields.';
+    return;
+  }
+  if (newPassword.value !== confirmPassword.value) {
+    registrationError.value = 'Passwords do not match.';
+    return;
+  }
+
+  const users = getUsers();
+  if (users.find(u => u.username === newUsername.value)) {
+    registrationError.value = 'Username already exists.';
+    return;
+  }
+
+  users.push({ username: newUsername.value, password: newPassword.value });
+  saveUsers(users);
+
+  registrationSuccess.value = 'Account created successfully! Please log in.';
+  // Reset registration form and switch to login
+  newUsername.value = '';
+  newPassword.value = '';
+  confirmPassword.value = '';
+  isRegistering.value = false;
+};
+
+const toggleForm = () => {
+  isRegistering.value = !isRegistering.value;
+  loginError.value = '';
+  registrationError.value = '';
+  registrationSuccess.value = '';
+  // Clear input fields when toggling
+  username.value = '';
+  password.value = '';
+  newUsername.value = '';
+  newPassword.value = '';
+  confirmPassword.value = '';
 };
 </script>
 
@@ -163,6 +255,22 @@ const handleLogin = () => {
   text-decoration: underline;
 }
 
+.toggle-form-link {
+  text-align: center;
+  margin-top: 15px;
+  font-size: 0.9em;
+}
+
+.toggle-form-link a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.toggle-form-link a:hover {
+  text-decoration: underline;
+}
+
 .app-footer {
   margin-top: 30px;
   font-size: 0.8em;
@@ -173,5 +281,12 @@ const handleLogin = () => {
   color: var(--color-danger); /* Red color for error messages */
   margin-top: 15px;
   font-size: 0.9em;
+}
+
+.success-message {
+  color: var(--color-success, #28a745); /* Green color for success messages */
+  margin-top: 15px;
+  font-size: 0.9em;
+  text-align: center;
 }
 </style>

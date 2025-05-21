@@ -2,8 +2,8 @@ import { createApp } from 'vue'
 import './style.css'
 import App from './App.vue'
 import router from './router' // Import the router instance
+import 'vue-toastification/dist/index.css'; // Import the CSS FIRST
 import Toast from 'vue-toastification'; // Import vue-toastification
-import 'vue-toastification/dist/index.css'; // Import the CSS
 
 const app = createApp(App);
 

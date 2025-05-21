@@ -70,7 +70,6 @@
                     <tr>
                         <th>From \ To</th>
                          <th v-for="toType in surgeryTypes" :key="'to-'+toType.id">{{ toType.name }}</th>
-                         <!-- Add more surgery types as columns -->
                     </tr>
                 </thead>
                 <tbody>
@@ -115,7 +114,6 @@
              <tr v-if="initialSetupTimes.length === 0">
                 <td colspan="3" class="no-items">No initial setup times defined.</td>
             </tr>
-            <!-- End Placeholder Rows -->
           </tbody>
         </table>
         <button class="add-button" @click="addInitialSetup">Add Initial Setup Time</button>
@@ -134,7 +132,7 @@
     <AddEditSurgeryTypeModal
       v-if="showSurgeryTypeModal"
       :initialData="surgeryTypeToEdit"
-      :isEditing="!!surgeryTypeToEdit" <!-- isEditing is true if surgeryTypeToEdit is not null -->
+      :isEditing="!!surgeryTypeToEdit"
       @save="handleSaveSurgeryType"
       @cancel="handleCancelSurgeryType"
     />
@@ -144,7 +142,7 @@
         v-if="showInitialSetupModal"
         :initialData="initialSetupToEdit"
         :isEditing="!!initialSetupToEdit"
-        :surgeryTypes="surgeryTypes" <!-- Pass surgery types to the modal -->
+        :surgeryTypes="surgeryTypes"
         @save="handleSaveInitialSetup"
         @cancel="handleCancelInitialSetup"
      />
@@ -234,7 +232,7 @@ const deleteSurgeryType = (typeId) => {
     console.log('Attempting to delete Surgery Type with ID:', typeId);
     // In a real app, show a confirmation dialog first (e.g., using a confirmation modal)
     const confirmDelete = confirm('Are you sure you want to delete this Surgery Type? This will also remove associated SDST matrix entries and initial setup times.');
-    
+
     if (confirmDelete) {
          // Simulate deletion from the list
          surgeryTypes.value = surgeryTypes.value.filter(type => type.id !== typeId);
@@ -411,7 +409,6 @@ const validateDataIntegrity = () => {
      return { isValid, errors: validationErrors };
 };
 // -----------------------------------------------
-
 
 </script>
 
