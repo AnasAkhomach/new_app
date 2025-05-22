@@ -3,7 +3,8 @@
     <div class="login-box">
       <header class="app-header">
         <!-- Placeholder for Logo -->
-        <img src="/public/vite.svg" alt="App Logo" class="app-logo">
+        <!-- Using /vite.svg directly as it's in the public directory -->
+        <img src="/vite.svg" alt="App Logo" class="app-logo">
         <h1>Surgery Scheduling System</h1>
       </header>
       <h2 class="form-title">{{ isRegistering ? 'Create Account' : 'Login' }}</h2>
@@ -12,44 +13,48 @@
       <form v-if="!isRegistering" class="login-form" @submit.prevent="handleLogin">
         <div class="input-group">
           <label for="username">Username</label>
-          <input type="text" id="username" name="username" v-model="username" required>
+          <input type="text" id="username" name="username" v-model="username" required autocomplete="username">
         </div>
         <div class="input-group">
           <label for="password">Password</label>
-          <input type="password" id="password" name="password" v-model="password" required>
+          <input type="password" id="password" name="password" v-model="password" required autocomplete="current-password">
           <!-- Password visibility toggle could be added later -->
         </div>
-        <button type="submit" class="login-button">Login</button>
+        <button type="submit" class="login-button" :disabled="isLoading">{{ isLoading ? 'Logging in...' : 'Login' }}</button>
+         <!-- Display login error -->
+        <p v-if="loginError" class="error-message" aria-live="polite">{{ loginError }}</p>
+
         <p class="toggle-form-link">
           Don't have an account? <a href="#" @click.prevent="toggleForm">Create one</a>
         </p>
-        <!-- Forgot password link only if FR-AUTH-005 is implemented, included for now -->
-        <a href="#" class="forgot-password-link">Forgot Password?</a>
+        <!-- Forgot password link only if FR-AUTH-005 is implemented -->
+        <!-- <a href="#" class="forgot-password-link">Forgot Password?</a> -->
       </form>
 
       <!-- Registration Form -->
       <form v-if="isRegistering" class="login-form" @submit.prevent="handleRegister">
         <div class="input-group">
           <label for="new-username">Username</label>
-          <input type="text" id="new-username" v-model="newUsername" required>
+          <input type="text" id="new-username" v-model="newUsername" required autocomplete="new-username">
         </div>
         <div class="input-group">
           <label for="new-password">Password</label>
-          <input type="password" id="new-password" v-model="newPassword" required>
+          <input type="password" id="new-password" v-model="newPassword" required autocomplete="new-password">
         </div>
         <div class="input-group">
           <label for="confirm-password">Confirm Password</label>
-          <input type="password" id="confirm-password" v-model="confirmPassword" required>
+          <input type="password" id="confirm-password" v-model="confirmPassword" required autocomplete="new-password">
         </div>
-        <button type="submit" class="login-button">Create Account</button>
+        <button type="submit" class="login-button" :disabled="isLoading">{{ isLoading ? 'Creating Account...' : 'Create Account' }}</button>
+         <!-- Display registration errors/success -->
+        <p v-if="registrationError" class="error-message" aria-live="polite">{{ registrationError }}</p>
+        <p v-if="registrationSuccess" class="success-message" aria-live="polite">{{ registrationSuccess }}</p>
+
         <p class="toggle-form-link">
           Already have an account? <a href="#" @click.prevent="toggleForm">Login</a>
         </p>
       </form>
 
-      <p v-if="loginError && !isRegistering" class="error-message">{{ loginError }}</p>
-      <p v-if="registrationError && isRegistering" class="error-message">{{ registrationError }}</p>
-      <p v-if="registrationSuccess && !isRegistering" class="success-message">{{ registrationSuccess }}</p>
       <!-- Optional Footer -->
       <footer class="app-footer">
         <p>&copy; 2023 Your Organization. All rights reserved.</p>
@@ -60,63 +65,80 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useRouter } from 'vue-router'; // Import useRouter
-import { setAuthenticated } from '../router'; // Import setAuthenticated
+import { useRouter } from 'vue-router';
+// We'll use a dedicated auth store instead of directly importing setAuthenticated
+// import { setAuthenticated } from '../router';
 
-const router = useRouter(); // Get router instance
+// Assuming an auth store will be created later
+// import { useAuthStore } from '@/stores/authStore';
+
+const router = useRouter();
+// const authStore = useAuthStore(); // Initialize auth store
 
 const username = ref('');
 const password = ref('');
 const loginError = ref('');
-const registrationError = ref('');
-const registrationSuccess = ref('');
 
 const isRegistering = ref(false);
 const newUsername = ref('');
 const newPassword = ref('');
 const confirmPassword = ref('');
+const registrationError = ref('');
+const registrationSuccess = ref('');
 
-// Simulated user store (using localStorage)
-const getUsers = () => {
-  const users = localStorage.getItem('users');
-  return users ? JSON.parse(users) : [];
-};
+const isLoading = ref(false); // State to manage loading indicator
 
-const saveUsers = (users) => {
-  localStorage.setItem('users', JSON.stringify(users));
-};
-
-const handleLogin = () => {
+// --- Placeholder/Simulated Authentication Logic ---
+// In a real app, this would interact with an authentication service or store
+const handleLogin = async () => {
   loginError.value = ''; // Clear previous errors
+  registrationSuccess.value = ''; // Clear registration success message on login attempt
 
   if (!username.value || !password.value) {
     loginError.value = 'Please enter both username and password.';
     return;
   }
 
-  // Placeholder login logic
-  console.log('Attempting login with:', username.value, password.value);
+  isLoading.value = true; // Show loading indicator
 
-  // --- Simulated Login Logic ---
-  // In a real app, you would send a request to your backend here.
-  // On successful response:
+  // --- Simulate API Call for Login ---
+  console.log('Simulating login attempt...');
+  try {
+    // In a real app, call authStore.login(username.value, password.value);
+    // await authStore.login(username.value, password.value);
 
-  // --- Simulated Login Logic ---
-  const users = getUsers();
-  const user = users.find(u => u.username === username.value && u.password === password.value);
+    // Simulate a successful login after a delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-  if (user) {
-    setAuthenticated(true);
-    router.push({ name: 'Dashboard' });
-  } else {
-    loginError.value = 'Invalid username or password.';
-    setAuthenticated(false);
+    // Simulate checking credentials (replace with actual auth check)
+     const users = JSON.parse(localStorage.getItem('users' ) || '[]');
+     const user = users.find(u => u.username === username.value && u.password === password.value);
+
+
+    if (user) {
+      console.log('Simulated login successful.');
+      // In a real app, the auth store would handle setting auth state and potentially redirecting
+      // For now, we simulate setting a flag and redirecting manually
+       localStorage.setItem('isAuthenticated', 'true');
+       router.push({ name: 'Dashboard' }); // Redirect to Dashboard route name
+
+    } else {
+      console.warn('Simulated login failed: Invalid credentials.');
+      loginError.value = 'Invalid username or password.';
+       localStorage.setItem('isAuthenticated', 'false');
+    }
+
+  } catch (error) {
+    console.error('Simulated login error:', error);
+    loginError.value = 'An error occurred during login.';
+     localStorage.setItem('isAuthenticated', 'false');
+  } finally {
+    isLoading.value = false; // Hide loading indicator
   }
-  // ------------------------------
 };
 
-const handleRegister = () => {
-  loginError.value = '';
+const handleRegister = async () => {
+  loginError.value = ''; // Clear login errors on register attempt
   registrationError.value = '';
   registrationSuccess.value = '';
 
@@ -129,35 +151,66 @@ const handleRegister = () => {
     return;
   }
 
-  const users = getUsers();
-  if (users.find(u => u.username === newUsername.value)) {
-    registrationError.value = 'Username already exists.';
-    return;
+  isLoading.value = true; // Show loading indicator
+
+  // --- Simulate API Call for Registration ---
+  console.log('Simulating registration attempt...');
+  try {
+    // In a real app, call authStore.register(newUsername.value, newPassword.value);
+    // await authStore.register(newUsername.value, newPassword.value);
+
+    // Simulate a registration attempt after a delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Simulate checking if username exists and saving
+     const users = JSON.parse(localStorage.getItem('users' ) || '[]');
+     if (users.find(u => u.username === newUsername.value)) {
+       console.warn('Simulated registration failed: Username exists.');
+       registrationError.value = 'Username already exists.';
+     } else {
+       users.push({ username: newUsername.value, password: newPassword.value });
+       localStorage.setItem('users', JSON.stringify(users));
+       console.log('Simulated registration successful.');
+       registrationSuccess.value = 'Account created successfully! Please log in.';
+
+        // Clear registration form fields
+        newUsername.value = '';
+        newPassword.value = '';
+        confirmPassword.value = '';
+        isRegistering.value = false; // Automatically switch to login form
+     }
+
+  } catch (error) {
+    console.error('Simulated registration error:', error);
+    registrationError.value = 'An error occurred during registration.';
+  } finally {
+    isLoading.value = false; // Hide loading indicator
   }
-
-  users.push({ username: newUsername.value, password: newPassword.value });
-  saveUsers(users);
-
-  registrationSuccess.value = 'Account created successfully! Please log in.';
-  // Reset registration form and switch to login
-  newUsername.value = '';
-  newPassword.value = '';
-  confirmPassword.value = '';
-  isRegistering.value = false;
 };
 
 const toggleForm = () => {
   isRegistering.value = !isRegistering.value;
-  loginError.value = '';
+  loginError.value = ''; // Clear errors when toggling
   registrationError.value = '';
-  registrationSuccess.value = '';
+  // registrationSuccess.value = ''; // Keep success message visible after registration
   // Clear input fields when toggling
   username.value = '';
   password.value = '';
-  newUsername.value = '';
-  newPassword.value = '';
-  confirmPassword.value = '';
+  if (!isRegistering.value) { // Only clear new user fields when switching *to* login
+      newUsername.value = '';
+      newPassword.value = '';
+      confirmPassword.value = '';
+  }
 };
+
+// In a real application, you would check authentication status on mount
+// and redirect if already authenticated.
+// onMounted(() => {
+//   if (authStore.isAuthenticated) {
+//     router.push({ name: 'Dashboard' });
+//   }
+// });
+
 </script>
 
 <style scoped>
@@ -166,39 +219,39 @@ const toggleForm = () => {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: var(--color-background); /* Use global background */
-  color: var(--color-very-dark-gray); /* Use global text color */
+  background-color: var(--color-background); /* Use global background variable */
+  color: var(--color-very-dark-gray); /* Use global text color variable */
 }
 
 .login-box {
-  background-color: var(--color-white); /* White box */
-  padding: 40px;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); /* Slightly stronger shadow */
+  background-color: var(--color-white); /* Use global white variable */
+  padding: var(--spacing-xl); /* Use global spacing variable */
+  border-radius: var(--border-radius-md); /* Use global border radius variable */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
   text-align: center;
   max-width: 400px;
   width: 90%;
 }
 
 .app-header {
-  margin-bottom: 25px; /* Increased margin */
+  margin-bottom: var(--spacing-lg); /* Use global spacing variable */
 }
 
 .app-logo {
-  height: 70px; /* Slightly larger logo */
-  margin-bottom: 15px;
+  height: 70px;
+  margin-bottom: var(--spacing-md); /* Use global spacing variable */
 }
 
 .app-header h1 {
-  font-size: 1.9em; /* Adjusted heading size */
+  font-size: var(--font-size-xl); /* Use global font size variable */
   color: var(--color-very-dark-gray);
   margin: 0;
 }
 
 .form-title {
-  font-size: 1.6em; /* Adjusted title size */
+  font-size: var(--font-size-lg); /* Use global font size variable */
   color: var(--color-very-dark-gray);
-  margin-bottom: 30px;
+  margin-bottom: var(--spacing-lg); /* Use global spacing variable */
 }
 
 .login-form {
@@ -206,49 +259,67 @@ const toggleForm = () => {
 }
 
 .input-group {
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-md); /* Use global spacing variable */
 }
 
 .input-group label {
   display: block;
-  margin-bottom: 8px;
-  font-weight: 600; /* Semi-bold labels */
-  color: var(--color-dark-gray); /* Slightly lighter label color */
+  margin-bottom: var(--spacing-xs); /* Use global spacing variable */
+  font-weight: var(--font-weight-medium); /* Use global font weight variable */
+  color: var(--color-dark-gray); /* Use global text color variable */
+  font-size: var(--font-size-base); /* Use global font size variable */
 }
 
 .input-group input[type="text"],
 .input-group input[type="password"] {
   width: 100%;
-  padding: 12px; /* More padding */
-  border: 1px solid var(--color-gray);
-  border-radius: 4px;
+  padding: var(--spacing-sm); /* Use global spacing variable */
+  border: 1px solid var(--color-gray); /* Use global border color variable */
+  border-radius: var(--border-radius-sm); /* Use global border radius variable */
   box-sizing: border-box;
-  font-size: 1em;
+  font-size: var(--font-size-base); /* Use global font size variable */
   color: var(--color-very-dark-gray);
+  background-color: var(--color-white);
+}
+
+/* Consistent focus styles using global variables */
+.input-group input[type="text"]:focus,
+.input-group input[type="password"]:focus {
+    outline: 2px solid var(--color-accent); /* Use global accent color for focus */
+    outline-offset: 2px;
+    border-color: transparent; /* Hide default border on focus */
+    box-shadow: none; /* Remove default shadow */
 }
 
 .login-button {
   width: 100%;
-  padding: 12px; /* Consistent padding with inputs */
+  padding: var(--spacing-sm); /* Use global spacing variable */
   background-color: var(--color-primary);
   color: var(--color-white);
   border: none;
-  border-radius: 4px;
-  font-size: 1.1em;
+  border-radius: var(--border-radius-sm); /* Use global border radius variable */
+  font-size: var(--font-size-base); /* Use global font size variable */
+  font-weight: var(--font-weight-medium); /* Use global font weight variable */
   cursor: pointer;
-  transition: background-color 0.25s ease;
+  transition: background-color 0.25s ease, opacity 0.25s ease; /* Add opacity transition for disabled state */
 }
 
-.login-button:hover {
+.login-button:hover:not(:disabled) {
   background-color: var(--color-primary-dark);
+}
+
+.login-button:disabled {
+    opacity: 0.7; /* Dim disabled button */
+    cursor: not-allowed;
 }
 
 .forgot-password-link {
   display: block;
-  margin-top: 15px;
-  font-size: 0.9em;
+  margin-top: var(--spacing-md); /* Use global spacing variable */
+  font-size: var(--font-size-sm); /* Use global font size variable */
   color: var(--color-primary);
   text-decoration: none;
+  text-align: center; /* Center the link */
 }
 
 .forgot-password-link:hover {
@@ -257,14 +328,15 @@ const toggleForm = () => {
 
 .toggle-form-link {
   text-align: center;
-  margin-top: 15px;
-  font-size: 0.9em;
+  margin-top: var(--spacing-md); /* Use global spacing variable */
+  font-size: var(--font-size-sm); /* Use global font size variable */
+   color: var(--color-very-dark-gray); /* Use global text color */
 }
 
 .toggle-form-link a {
   color: var(--color-primary);
   text-decoration: none;
-  font-weight: bold;
+  font-weight: var(--font-weight-bold); /* Use global font weight variable */
 }
 
 .toggle-form-link a:hover {
@@ -272,21 +344,22 @@ const toggleForm = () => {
 }
 
 .app-footer {
-  margin-top: 30px;
-  font-size: 0.8em;
-  color: var(--color-dark-gray); /* Footer text color */
+  margin-top: var(--spacing-lg); /* Use global spacing variable */
+  font-size: var(--font-size-sm); /* Use global font size variable */
+  color: var(--color-dark-gray); /* Use global text color variable */
 }
 
 .error-message {
-  color: var(--color-danger); /* Red color for error messages */
-  margin-top: 15px;
-  font-size: 0.9em;
+  color: var(--color-danger); /* Use global danger color variable */
+  margin-top: var(--spacing-md); /* Use global spacing variable */
+  font-size: var(--font-size-sm); /* Use global font size variable */
+  text-align: center; /* Center error message */
 }
 
 .success-message {
-  color: var(--color-success, #28a745); /* Green color for success messages */
-  margin-top: 15px;
-  font-size: 0.9em;
+  color: var(--color-success); /* Use global success color variable */
+  margin-top: var(--spacing-md); /* Use global spacing variable */
+  font-size: var(--font-size-sm); /* Use global font size variable */
   text-align: center;
 }
 </style>

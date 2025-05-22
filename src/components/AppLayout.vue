@@ -2,7 +2,7 @@
   <div :class="['app-layout', { 'sidebar-collapsed': isSidebarCollapsed }]">
     <header class="top-nav-bar">
       <div class="app-brand">
-         <button @click="toggleSidebar" class="icon-button toggle-sidebar-button">
+         <button @click="toggleSidebar" class="icon-button toggle-sidebar-button" aria-label="Toggle Sidebar">
              <!-- Hamburger or arrow icon -->
              <span v-if="isSidebarCollapsed">&#x25BA;</span> <!-- Right arrow -->
              <span v-else>&#x25C4;</span> <!-- Left arrow -->
@@ -13,34 +13,35 @@
       </div>
       <div class="global-search">
         <!-- Global Search Bar -->
-        <input type="text" placeholder="Search..." v-model="searchTerm" @input="handleSearch">
+        <input type="text" placeholder="Search..." v-model="searchTerm" @input="handleSearch" aria-label="Search">
       </div>
       <div class="user-utilities">
         <!-- Notification Icon -->
-        <button class="icon-button">🔔</button>
+        <button class="icon-button" aria-label="Notifications">🔔</button>
         <!-- User Profile Dropdown -->
-        <div class="user-profile">
-          <span>User Name</span> <!-- This should be dynamic later -->
+        <div class="user-profile" aria-haspopup="true" aria-expanded="false"> <!-- Add ARIA for dropdown -->
+          <span>{{ authStore.user?.username || 'User Name' }}</span> <!-- Display dynamic username -->
           <!-- Dropdown icon/button here -->
+           <span class="user-profile-dropdown-icon">▼</span> <!-- Simple dropdown arrow -->
         </div>
       </div>
     </header>
 
     <aside class="left-sidebar">
       <!-- Navigation Links -->
-      <nav>
+      <nav aria-label="Main Navigation">
         <ul>
-          <li><router-link to="/dashboard"><span class="nav-icon">🏠</span><span v-if="!isSidebarCollapsed" class="nav-text">Dashboard</span></router-link></li>
-          <li><router-link to="/scheduling"><span class="nav-icon">📅</span><span v-if="!isSidebarCollapsed" class="nav-text">Scheduling</span></router-link></li>
-          <li><router-link to="/resource-management"><span class="nav-icon">🛠️</span><span v-if="!isSidebarCollapsed" class="nav-text">Resource Management</span></router-link></li>
-          <li><router-link to="/sdst-data-management"><span class="nav-icon">📊</span><span v-if="!isSidebarCollapsed" class="nav-text">SDST Data Management</span></router-link></li>
-          <li><router-link to="/reporting-analytics"><span class="nav-icon">📈</span><span v-if="!isSidebarCollapsed" class="nav-text">Reporting & Analytics</span></router-link></li>
-          <li><router-link to="/notifications"><span class="nav-icon">🔔</span><span v-if="!isSidebarCollapsed" class="nav-text">Notifications</span></router-link></li>
-          <li><router-link to="/administration"><span class="nav-icon">⚙️</span><span v-if="!isSidebarCollapsed" class="nav-text">Administration</span></router-link></li>
-          <li><router-link to="/patient-management"><span class="nav-icon">👨‍⚕️</span><span v-if="!isSidebarCollapsed" class="nav-text">Patient Management</span></router-link></li>
-          <li><router-link to="/my-profile-settings"><span class="nav-icon">👤</span><span v-if="!isSidebarCollapsed" class="nav-text">My Profile / Settings</span></router-link></li>
-          <li><router-link to="/help-documentation"><span class="nav-icon">❓</span><span v-if="!isSidebarCollapsed" class="nav-text">Help / Documentation</span></router-link></li>
-          <li class="logout-item"><button @click="handleLogout" class="logout-button"><span class="nav-icon">🚪</span><span v-if="!isSidebarCollapsed" class="nav-text">Logout</span></button></li>
+          <li><router-link to="/dashboard"><span class="nav-icon" aria-hidden="true">🏠</span><span v-if="!isSidebarCollapsed" class="nav-text">Dashboard</span></router-link></li>
+          <li><router-link to="/scheduling"><span class="nav-icon" aria-hidden="true">📅</span><span v-if="!isSidebarCollapsed" class="nav-text">Scheduling</span></router-link></li>
+          <li><router-link to="/resource-management"><span class="nav-icon" aria-hidden="true">🛠️</span><span v-if="!isSidebarCollapsed" class="nav-text">Resource Management</span></router-link></li>
+          <li><router-link to="/sdst-data-management"><span class="nav-icon" aria-hidden="true">📊</span><span v-if="!isSidebarCollapsed" class="nav-text">SDST Data Management</span></router-link></li>
+          <li><router-link to="/reporting-analytics"><span class="nav-icon" aria-hidden="true">📈</span><span v-if="!isSidebarCollapsed" class="nav-text">Reporting & Analytics</span></router-link></li>
+          <li><router-link to="/notifications"><span class="nav-icon" aria-hidden="true">🔔</span><span v-if="!isSidebarCollapsed" class="nav-text">Notifications</span></router-link></li>
+          <li><router-link to="/administration"><span class="nav-icon" aria-hidden="true">⚙️</span><span v-if="!isSidebarCollapsed" class="nav-text">Administration</span></router-link></li>
+          <li><router-link to="/patient-management"><span class="nav-icon" aria-hidden="true">👨‍⚕️</span><span v-if="!isSidebarCollapsed" class="nav-text">Patient Management</span></router-link></li>
+          <li><router-link to="/my-profile-settings"><span class="nav-icon" aria-hidden="true">👤</span><span v-if="!isSidebarCollapsed" class="nav-text">My Profile / Settings</span></router-link></li>
+          <li><router-link to="/help-documentation"><span class="nav-icon" aria-hidden="true">❓</span><span v-if="!isSidebarCollapsed" class="nav-text">Help / Documentation</span></router-link></li>
+          <li class="logout-item"><button @click="handleLogout" class="logout-button"><span class="nav-icon" aria-hidden="true">🚪</span><span v-if="!isSidebarCollapsed" class="nav-text">Logout</span></button></li>
         </ul>
       </nav>
     </aside>
@@ -57,10 +58,18 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { setAuthenticated } from '../router'; // Assuming this path is correct
-import { useToast } from 'vue-toastification';
+// import { setAuthenticated } from '../router'; // REMOVED
+import { useToast } from 'vue-toastification'; // Assuming you use this for notifications
+
+// Import the authentication store
+import { useAuthStore } from '@/stores/authStore';
+import { storeToRefs } from 'pinia';
 
 const router = useRouter();
+const authStore = useAuthStore(); // Get store instance
+
+// Use storeToRefs for reactive state from the store if needed in template directly
+const { isAuthenticated, user, isLoading, error } = storeToRefs(authStore);
 
 const isSidebarCollapsed = ref(false); // State for sidebar collapse
 const searchTerm = ref(''); // State for global search input
@@ -70,9 +79,9 @@ const toggleSidebar = () => {
 };
 
 const handleLogout = () => {
-  localStorage.removeItem('authToken'); // Clear auth token
-  setAuthenticated(false); // Set the global auth state to false
-  router.push({ name: 'Login' }); // Redirect to login
+  console.log('AppLayout: Handling logout click.');
+  authStore.logout(); // Call the logout action from the auth store
+  // The auth store will handle clearing state and redirecting
 };
 
 const handleSearch = () => {
@@ -81,10 +90,20 @@ const handleSearch = () => {
   // In a real app, this would trigger a search action,
   // potentially navigating to a search results page or filtering data.
 };
+
+// Optional: Check auth state on mount to ensure consistency (though router guard should handle initial check)
+// onMounted(() => {
+//    if (!authStore.isAuthenticated && router.currentRoute.value.meta.requiresAuth) {
+//        router.push({ name: 'Login' });
+//    }
+// });
+
 </script>
 
 <style scoped>
 /* Basic Variables (Consider moving to a global CSS file or :root) */
+/* These variables should ideally be in a global file like src/style.css */
+/* Duplicated here for demonstration, but avoid in production */
 :root {
   --color-primary: #4A90E2; /* Example Primary Color */
   --color-primary-dark: #357ABD;
@@ -96,6 +115,12 @@ const handleSearch = () => {
   --sidebar-width: 240px;
   --sidebar-width-collapsed: 60px;
   --top-nav-height: 60px;
+
+  /* Ensure using the variables from src/style.css */
+  /* Example: */
+  /* --color-primary: var(--color-primary); */
+  /* --color-background: var(--color-background); */
+  /* etc. */
 }
 
 .app-layout {
@@ -116,12 +141,12 @@ const handleSearch = () => {
   grid-column: 1 / 3; /* Span across both columns */
   grid-row: 1;
   background-color: var(--color-surface);
-  padding: 0 20px; /* Horizontal padding */
+  padding: 0 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Softer shadow */
-  z-index: 1000; /* Ensure it's above other content */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  z-index: 1000;
   height: var(--top-nav-height);
 }
 
@@ -131,7 +156,7 @@ const handleSearch = () => {
   font-size: 1.25em;
   font-weight: 600;
   color: var(--color-text-primary);
-  overflow: hidden; /* Hide text when collapsing */
+  overflow: hidden;
 }
 
 .toggle-sidebar-button {
@@ -166,10 +191,10 @@ const handleSearch = () => {
 .global-search input[type="text"] {
     padding: 9px 15px;
     border: 1px solid var(--color-border);
-    border-radius: 18px; /* Slightly less rounded */
+    border-radius: 18px;
     font-size: 0.9em;
-    width: 280px; /* Adjust as needed */
-    background-color: #f0f2f5; /* Lighter background for search */
+    width: 280px;
+    background-color: #f0f2f5;
     color: var(--color-text-primary);
     transition: width 0.3s ease-in-out, background-color 0.2s ease;
 }
@@ -194,12 +219,12 @@ const handleSearch = () => {
     margin-left: 15px;
     padding: 8px;
     color: var(--color-text-secondary);
-    border-radius: 50%; /* Circular buttons */
+    border-radius: 50%;
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .icon-button:hover {
-    background-color: #e9ecef; /* Light hover effect */
+    background-color: #e9ecef;
     color: var(--color-primary);
 }
 
@@ -224,11 +249,9 @@ const handleSearch = () => {
     font-size: 0.9em;
 }
 
-/* Placeholder for a user icon, consider using an SVG or font icon */
-.user-profile::after {
-    content: '▼'; /* Simple dropdown arrow */
-    font-size: 0.7em;
-    color: var(--color-text-secondary);
+.user-profile-dropdown-icon {
+     font-size: 0.7em;
+     color: var(--color-text-secondary);
 }
 
 
@@ -239,7 +262,7 @@ const handleSearch = () => {
   padding-top: 15px;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
   overflow-y: auto;
-  overflow-x: hidden; /* Prevent horizontal scrollbar */
+  overflow-x: hidden;
   transition: width 0.3s ease-in-out;
   border-right: 1px solid var(--color-border);
 }
@@ -251,7 +274,7 @@ const handleSearch = () => {
 }
 
 .left-sidebar nav li {
-  margin-bottom: 2px; /* Small gap between items */
+  margin-bottom: 2px;
 }
 
 .left-sidebar nav a,
@@ -264,14 +287,14 @@ const handleSearch = () => {
   font-weight: 500;
   font-size: 0.95em;
   transition: background-color 0.2s ease, color 0.2s ease, padding-left 0.3s ease-in-out;
-  white-space: nowrap; /* Prevent text wrapping */
-  overflow: hidden; /* Hide text when collapsing */
-  border-left: 3px solid transparent; /* For active link indication */
+  white-space: nowrap;
+  overflow: hidden;
+  border-left: 3px solid transparent;
 }
 
 .app-layout.sidebar-collapsed .left-sidebar nav a,
 .app-layout.sidebar-collapsed .left-sidebar nav .logout-button {
-    padding-left: calc((var(--sidebar-width-collapsed) - 24px - 6px) / 2); /* Center icon: (width - icon_size - border_width) / 2 */
+    padding-left: calc((var(--sidebar-width-collapsed) - 24px - 6px) / 2);
     justify-content: center;
 }
 
@@ -281,20 +304,20 @@ const handleSearch = () => {
 
 .left-sidebar nav a:hover,
 .left-sidebar nav .logout-button:hover {
-  background-color: #e9ecef; /* Light hover */
+  background-color: #e9ecef;
   color: var(--color-primary);
 }
 
 .left-sidebar nav a.router-link-exact-active {
   color: var(--color-primary);
-  background-color: #e7f3ff; /* Lighter primary for active */
+  background-color: #e7f3ff;
   border-left-color: var(--color-primary);
 }
 
 .nav-icon {
     margin-right: 12px;
-    font-size: 1.2em; /* Icon size */
-    width: 24px; /* Fixed width for alignment */
+    font-size: 1.2em;
+    width: 24px;
     text-align: center;
     transition: margin-right 0.3s ease-in-out;
 }
@@ -304,9 +327,9 @@ const handleSearch = () => {
 }
 
 .logout-item {
-    margin-top: auto; /* Pushes logout to the bottom if sidebar has fixed height and flex column */
-    padding-top: 20px; /* Space above logout */
-    border-top: 1px solid var(--color-border); /* Separator */
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid var(--color-border);
 }
 
 .logout-button {
@@ -315,13 +338,21 @@ const handleSearch = () => {
   border: none;
   cursor: pointer;
   text-align: left;
+   /* Use danger color for the button */
+    color: var(--color-danger);
+    font-weight: var(--font-weight-medium);
+}
+
+.logout-button:hover {
+     background-color: #e9ecef; /* Light hover */
+     color: var(--color-danger-dark); /* Consider adding a danger-dark variable */
 }
 
 .main-content {
-  grid-column: 2; /* Second column */
-  grid-row: 2; /* Second row */
+  grid-column: 2;
+  grid-row: 2;
   padding: 25px;
-  overflow-y: auto; /* Allow scrolling for page content */
+  overflow-y: auto;
   background-color: var(--color-background);
 }
 
@@ -344,6 +375,6 @@ const handleSearch = () => {
 
 .left-sidebar::-webkit-scrollbar-track,
 .main-content::-webkit-scrollbar-track {
-  background-color: transparent; /* Or var(--color-background) */
+  background-color: transparent;
 }
 </style>

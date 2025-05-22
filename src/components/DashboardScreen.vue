@@ -1,192 +1,226 @@
 <template>
   <div class="dashboard-container">
-    <h1>Dashboard</h1>
+    <h1>Welcome, {{ authStore.user?.username || 'User' }}!</h1>
 
-    <div v-if="isLoading" class="loading-message">
+    <div v-if="scheduleStore.isLoading" class="loading-message">
       Loading dashboard data...
     </div>
 
-    <div v-if="!isLoading">
-      <div class="dashboard-widgets">
-        <!-- Quick Actions Widget -->
-        <div class="widget quick-actions-widget">
-          <h2>Quick Actions</h2>
-          <div class="quick-action-buttons">
-            <button @click="scheduleNewSurgery">Schedule New Elective Surgery</button>
-            <button class="button-secondary" @click="addEmergencyCase">Add Emergency Case</button>
-            <button @click="goToMasterSchedule">Go to Master Schedule</button>
-            <button @click="manageResources">Manage Resources</button>
-            <button class="button-secondary" @click="runOptimization">Run Optimization</button>
+    <div v-else class="dashboard-widgets">
+      <!-- Quick Actions Widget -->
+      <div class="widget quick-actions-widget">
+        <h2>Quick Actions</h2>
+        <div class="quick-action-buttons">
+          <button @click="scheduleNewSurgery">Schedule New Elective Surgery</button>
+          <button class="btn btn-secondary" @click="addEmergencyCase">Add Emergency Case</button>
+          <button @click="goToMasterSchedule">Go to Master Schedule</button>
+          <button @click="manageResources">Manage Resources</button>
+          <button class="btn btn-secondary" @click="runOptimization">Run Optimization</button>
+        </div>
+      </div>
+
+      <!-- Key Performance Indicators (KPIs) Widget -->
+      <div class="widget kpis-widget">
+        <h2>Key Performance Indicators</h2>
+        <div class="kpi-list">
+          <!-- KPIs will likely come from the scheduleStore or a dedicated reporting store later -->
+          <div class="kpi-item" @click="navigateToReport('OR Utilization')">
+            <span class="kpi-label">OR Utilization (Today):</span>
+            <!-- Using simulated data for now -->
+            <span class="kpi-value">{{ orUtilizationToday }}%</span>
+          </div>
+          <div class="kpi-item" @click="navigateToReport('Avg. SDST')">
+            <span class="kpi-label">Avg. SDST (Today):</span>
+             <!-- Using simulated data for now -->
+            <span class="kpi-value">{{ avgSdstToday }} min</span>
+          </div>
+          <div class="kpi-item" @click="navigateToReport('Emergency Cases')">
+            <span class="kpi-label">Emergency Cases (Today):</span>
+             <!-- Using simulated data for now -->
+            <span class="kpi-value">{{ emergencyCasesToday }}</span>
+          </div>
+          <div class="kpi-item" @click="navigateToReport('Cancelled Surgeries')">
+            <span class="kpi-label">Cancelled Surgeries (Today):</span>
+             <!-- Using simulated data for now -->
+            <span class="kpi-value">{{ cancelledSurgeriesToday }}</span>
           </div>
         </div>
+        <!-- Placeholder for charts/visualizations -->
+        <p><em>(Placeholder for KPI charts/visualizations)</em></p>
+      </div>
 
-        <!-- Key Performance Indicators (KPIs) Widget -->
-        <div class="widget kpis-widget">
-          <h2>Key Performance Indicators</h2>
-          <div class="kpi-list">
-            <div class="kpi-item" @click="handleKpiClick('OR Utilization')">
-              <span class="kpi-label">OR Utilization (Today):</span>
-              <span class="kpi-value">{{ orUtilizationToday }}%</span>
-            </div>
-            <div class="kpi-item" @click="handleKpiClick('Avg. SDST')">
-              <span class="kpi-label">Avg. SDST (Today):</span>
-              <span class="kpi-value">{{ avgSdstToday }} min</span>
-            </div>
-            <div class="kpi-item" @click="handleKpiClick('Emergency Cases')">
-              <span class="kpi-label">Emergency Cases (Today):</span>
-              <span class="kpi-value">{{ emergencyCasesToday }}</span>
-            </div>
-            <div class="kpi-item" @click="handleKpiClick('Cancelled Surgeries')">
-              <span class="kpi-label">Cancelled Surgeries (Today):</span>
-              <span class="kpi-value">{{ cancelledSurgeriesToday }}</span>
-            </div>
-          </div>
-          <!-- Placeholder for charts/visualizations -->
-          <p><em>(Placeholder for KPI charts/visualizations)</em></p>
+      <!-- Today's OR Schedule Overview Widget -->
+      <div class="widget schedule-overview-widget">
+        <h2>Today's OR Schedule Overview</h2>
+        <!-- Display a snippet of today's scheduled surgeries from the store -->
+        <ul v-if="todayScheduleSnippet.length > 0" class="schedule-list">
+           <li v-for="surgery in todayScheduleSnippet" :key="surgery.id">
+              {{ formatTime(surgery.startTime) }} - OR {{ surgery.orName }}: {{ surgery.patientName }} - {{ surgery.type }}
+              <span v-if="surgery.conflicts && surgery.conflicts.length > 0" class="schedule-item-conflict">⚠️</span>
+           </li>
+        </ul>
+        <p v-else class="no-items">No surgeries scheduled for today in the current view.</p>
+        <p>Provides at-a-glance view of today's operations across all ORs.</p>
+      </div>
+
+      <!-- Critical Resource Alerts Widget -->
+      <div class="widget alerts-widget">
+        <h2>Critical Resource Alerts</h2>
+        <!-- Alerts would ideally come from a dedicated alerts store or the schedule store's processed data -->
+        <ul>
+          <li v-for="alert in criticalAlerts" :key="alert.id" class="alert-item" @click="handleAlertClick(alert)">{{ alert.message }}</li>
+          <li v-if="criticalAlerts.length === 0" class="no-items">No critical alerts</li>
+        </ul>
+      </div>
+
+      <!-- SDST Conflict Summary Widget -->
+      <div class="widget sdst-conflicts-widget">
+        <h2>SDST Conflict Summary</h2>
+        <!-- SDST Conflicts come from the scheduleStore's processed data -->
+        <ul>
+          <li v-for="conflict in sdstConflictsFromStore" :key="conflict.id" class="conflict-item" @click="handleConflictClick(conflict)">{{ conflict.message }}</li>
+          <li v-if="sdstConflictsFromStore.length === 0" class="no-items">No SDST conflicts</li>
+        </ul>
+      </div>
+
+      <!-- Conflict Details Display Area - Might be a modal or separate view later -->
+      <div v-if="selectedConflict" class="widget conflict-details-widget">
+        <h2>Conflict Details</h2>
+        <p>Conflict details will be displayed here.</p>
+        <p>Selected Conflict: {{ selectedConflict.message }}</p>
+
+        <!-- Conflict Resolution Actions -->
+        <div class="conflict-actions">
+            <button @click="viewConflictingSurgeries">View Conflicting Surgeries</button>
+            <button class="btn btn-secondary" @click="ignoreConflict">Ignore Conflict</button>
         </div>
+      </div>
 
-        <!-- Today's OR Schedule Overview Widget -->
-        <div class="widget schedule-overview-widget">
-          <h2>Today's OR Schedule Overview</h2>
-          <!-- Placeholder for compact timeline/Gantt view or simple list -->
-          <ul v-if="todaySchedule.length > 0" class="schedule-list">
-            <li v-for="surgery in todaySchedule" :key="surgery.id">{{ surgery.time }} - OR {{ surgery.or }}: {{ surgery.description }}</li>
-          </ul>
-          <p>Provides at-a-glance view of today's operations across all ORs.</p>
-        </div>
-
-        <!-- Critical Resource Alerts Widget -->
-        <div class="widget alerts-widget">
-          <h2>Critical Resource Alerts</h2>
-          <ul>
-            <li v-for="alert in criticalAlerts" :key="alert.id" class="alert-item" @click="handleAlertClick(alert)">{{ alert.message }}</li>
-            <li v-if="criticalAlerts.length === 0" class="no-items">No critical alerts</li>
-          </ul>
-        </div>
-
-        <!-- SDST Conflict Summary Widget -->
-        <div class="widget sdst-conflicts-widget">
-          <h2>SDST Conflict Summary</h2>
-          <ul>
-            <li v-for="conflict in sdstConflicts" :key="conflict.id" class="conflict-item" @click="handleConflictClick(conflict)">{{ conflict.message }}</li>
-            <li v-if="sdstConflicts.length === 0" class="no-items">No SDST conflicts</li>
-          </ul>
-        </div>
-
-        <!-- Conflict Details Display Area -->
-        <div v-if="selectedConflict" class="widget conflict-details-widget">
-          <h2>Conflict Details</h2>
-          Conflict details will be displayed here.
-
-          <!-- Conflict Resolution Actions -->
-          <button @click="viewConflictingSurgeries">View Conflicting Surgeries</button>
-          <button class="button-secondary" @click="ignoreConflict">Ignore Conflict</button>
-        </div>
-
-        <!-- Pending Surgeries Queue Widget -->
-        <div class="widget pending-surgeries-widget">
-          <h2>Pending Surgeries Queue</h2>
-          <ul class="pending-surgeries-list">
-            <li v-for="surgery in pendingSurgeries" :key="surgery.id" class="pending-surgery-item" @click="handlePendingSurgeryClick(surgery)">{{ surgery.patient }} - {{ surgery.type }}</li>
-            <li v-if="pendingSurgeries.length === 0" class="no-items">No pending surgeries</li>
-          </ul>
-          <p>Sortable list of surgeries awaiting scheduling.</p>
-        </div>
+      <!-- Pending Surgeries Queue Widget -->
+      <div class="widget pending-surgeries-widget">
+        <h2>Pending Surgeries Queue</h2>
+        <!-- Display pending surgeries from the store -->
+        <ul class="pending-surgeries-list">
+          <li v-for="surgery in pendingSurgeriesFromStore" :key="surgery.id" class="pending-surgery-item" @click="handlePendingSurgeryClick(surgery)">{{ surgery.patientName }} - {{ surgery.type }} ({{ surgery.estimatedDuration }} min)</li>
+          <li v-if="pendingSurgeriesFromStore.length === 0" class="no-items">No pending surgeries</li>
+        </ul>
+        <p>Sortable list of surgeries awaiting scheduling.</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-// TODO: Conduct a comprehensive accessibility review and implement WCAG 2.1 AA compliance, especially for custom interactive elements.
-// This component represents the Scheduler's dashboard. Dashboards for other roles (Surgeon, Nurse, Admin) would be separate components.
-import { ref } from 'vue'; // Import ref for reactive variables
-import { onMounted } from 'vue';
-import { useRouter } from 'vue-router'; // Import useRouter
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/authStore';
+import { useScheduleStore } from '@/stores/scheduleStore';
+import { storeToRefs } from 'pinia';
 
-const router = useRouter(); // Get router instance
+const router = useRouter();
+const authStore = useAuthStore();
+const scheduleStore = useScheduleStore();
 
-// Loading state
-const isLoading = ref(true);
-const selectedConflict = ref(null); // New ref to hold selected conflict details
-const todaySchedule = ref([]); // New ref for today's schedule
+// Use storeToRefs to get reactive state and getters from stores
+const { user } = storeToRefs(authStore);
+const { visibleScheduledSurgeries, pendingSurgeries } = storeToRefs(scheduleStore);
 
-// Simulated data for KPIs
+// Local state for the dashboard component
+// const isLoading = ref(true); // Use scheduleStore.isLoading instead
+const selectedConflict = ref(null); // State to hold selected conflict details for the details widget
+
+// Simulated data for KPIs (replace with data from stores/APIs later)
 const orUtilizationToday = ref(85);
 const avgSdstToday = ref(30);
 const emergencyCasesToday = ref(2);
 const cancelledSurgeriesToday = ref(1);
 
-// Simulated data for other widgets
+// Simulated data for other widgets (replace with data from stores later)
 const criticalAlerts = ref([
   { id: 1, message: 'OR 3: A/C Maintenance Overdue' },
   { id: 2, message: 'Anesthesia Machine X: Unavailable' },
 ]);
 
-const sdstConflicts = ref([
-  { id: 1, message: "SDST Conflict: Requires 60 min setup, only 45 min available before Patient Z's surgery" },
-]);
+// Computed property to get SDST conflicts from the schedule store
+const sdstConflictsFromStore = computed(() => {
+    // Assuming conflicts array on surgery objects includes SDST violations
+    const conflicts = [];
+    scheduleStore.scheduledSurgeries.forEach(surgery => {
+        if (surgery.conflicts && surgery.conflicts.length > 0) {
+            surgery.conflicts.forEach(conflictMsg => {
+                if (conflictMsg.includes('SDST')) { // Filter for SDST specific conflicts (simple check)
+                    conflicts.push({ id: surgery.id + conflictMsg.slice(0, 10), message: `${surgery.patientName} (${surgery.type}): ${conflictMsg}` });
+                }
+            });
+        }
+    });
+    return conflicts;
+});
 
-const pendingSurgeries = ref([
-  { id: 1, patient: 'Patient A', type: 'Appendectomy' },
-  { id: 2, patient: 'Patient B', type: 'Knee Replacement' },
-  { id: 3, patient: 'Patient C', type: 'Cataract Surgery' },
-]);
+// Computed property to get pending surgeries from the store
+const pendingSurgeriesFromStore = computed(() => {
+    return pendingSurgeries.value; // Direct use of storeToRefs ref
+});
+
+// Computed property for a snippet of today's schedule (e.g., first few surgeries or key ones)
+const todayScheduleSnippet = computed(() => {
+    // For a dashboard snippet, we might just show a limited number
+    // Or filter for high priority/upcoming ones.
+    // Let's show the first 5 surgeries from the visible scheduled list for OR1 and OR2 as an example
+    const snippet = [];
+    const orsToShow = ['OR1', 'OR2']; // Example: show schedule for key ORs
+
+    orsToShow.forEach(orId => {
+         const surgeriesInOR = scheduleStore.getSurgeriesForOR(orId);
+         // Add a header or separator for each OR in the snippet if desired
+        // snippet.push({ id: 'or-header-' + orId, isHeader: true, name: scheduleStore.operatingRooms.find(o => o.id === orId)?.name || orId });
+         snippet.push(...surgeriesInOR.slice(0, 3)); // Take first 3 from each OR
+    });
+
+    // Sort the final snippet by time if combining from multiple ORs
+    snippet.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+    return snippet.slice(0, 10); // Limit total snippet size
+});
+
 
 // --- Quick Action Button Handlers ---
 const scheduleNewSurgery = () => {
   console.log('Navigate to Schedule New Surgery form');
-  // In a real app, navigate to the surgery creation page/modal
-  // router.push({ name: 'CreateSurgery' });
+  // Assuming a route named 'CreateSurgeryForm' or similar
+  // router.push({ name: 'CreateSurgeryForm' });
 };
 
 const addEmergencyCase = () => {
   console.log('Navigate to Add Emergency Case form');
-  // In a real app, navigate to the emergency case entry page/modal
-  // router.push({ name: 'AddEmergencyCase' });
+  // Assuming a route named 'AddEmergencyCaseForm' or similar
+  // router.push({ name: 'AddEmergencyCaseForm' });
 };
 
 const goToMasterSchedule = () => {
   console.log('Navigate to Master Schedule');
-  router.push({ name: 'Scheduling' }); // Navigate to the Scheduling route
+  router.push({ name: 'Scheduling' });
 };
 
 const manageResources = () => {
   console.log('Navigate to Resource Management');
-  router.push({ name: 'ResourceManagement' }); // Navigate to the Resource Management route
+  router.push({ name: 'ResourceManagement' });
 };
 
 const runOptimization = () => {
   console.log('Trigger Optimization Engine');
-  // In a real app, this would likely open a modal or navigate to an optimization control page
+  // This might open a modal or dispatch a store action
+  // scheduleStore.runOptimization();
+  // If it navigates, assuming a route named 'OptimizationControl'
   // router.push({ name: 'OptimizationControl' });
 };
 // -------------------------------------
 
 // --- KPI Click Handler ---
-const fetchDashboardData = async () => {
-  // Simulate fetching data from an API
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate 1-second delay
-
-  // Simulate populating today's schedule
-  todaySchedule.value = [
-    { id: 101, or: 'OR 1', time: '08:00', description: 'Patient X - Appendectomy' },
-    { id: 102, or: 'OR 2', time: '09:30', description: 'Patient Y - Knee Replacement' },
-    { id: 103, or: 'OR 1', time: '11:00', description: 'Patient Z - Cataract Surgery' },
-    { id: 104, or: 'OR 3', time: '10:00', description: 'Patient W - Emergency Case' },
-  ];
-
-  isLoading.value = false; // Set loading to false when data is fetched
-};
-
 const navigateToReport = (kpiName) => {
   console.log(`Navigating to report for: ${kpiName}`);
-  // Implement actual navigation later
-};
-
-// --- Placeholder Action Methods ---
-const handleKpiClick = (kpiName) => {
-  navigateToReport(kpiName);
+  // Assuming a Reporting route with query parameters or dynamic segments
+  // router.push({ name: 'ReportingAnalytics', query: { report: kpiName.replace(/[^a-zA-Z0-9]/g, '') } });
 };
 
 // --- Alert Click Handler ---
@@ -197,37 +231,56 @@ const handleAlertClick = (alert) => {
 
 // --- Pending Surgery Click Handler ---
 const handlePendingSurgeryClick = (surgery) => {
-  viewSurgeryDetails(surgery);
+  console.log('View details for pending surgery:', surgery);
+  // This should likely navigate to the Surgery Scheduling screen
+  // with this surgery pre-selected or highlighted, or open a modal.
+  // For now, we can simulate selecting it in the store, which the Details Panel listens to.
+   scheduleStore.selectSurgery(surgery.id);
+   router.push({ name: 'Scheduling' }); // Optional: Navigate to scheduling screen
 };
 
 // --- Conflict Click Handler ---
 const handleConflictClick = (conflict) => {
-  selectedConflict.value = conflict; // Set the selected conflict
+  selectedConflict.value = conflict; // Set the selected conflict for display in the widget
+   console.log('Viewing conflict details for:', conflict);
+   // This might also navigate or highlight on the scheduling screen later
 };
 
 const viewConflictingSurgeries = () => {
   console.log('View conflicting surgeries for:', selectedConflict.value);
   // In a real app, open a modal or navigate to a view showing related surgeries
+  // This would likely involve navigating to the Scheduling screen and highlighting the relevant surgeries
 };
 
 const ignoreConflict = () => {
   console.log('Ignore conflict:', selectedConflict.value);
   // In a real app, send an API call to mark the conflict as ignored or resolved
+  // After successful API call, update the store or refetch relevant data
 };
 
-const viewSurgeryDetails = (surgery) => {
-  console.log('View details for pending surgery:', surgery);
-  // Implement modal or navigation to pending surgery details later
+
+const formatTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-// Component logic for fetching real data would go here later
+// Load initial data for the dashboard when the component is mounted
+// This might involve calling scheduleStore actions to fetch data relevant to the dashboard view
 onMounted(() => {
-  fetchDashboardData();
+  console.log('DashboardScreen mounted. Loading data...');
+  // The scheduleStore.loadInitialData() might be called here or earlier (e.g., on app startup)
+  // If data is already loaded, the store will provide it reactively.
+  // If not, calling it here ensures data is fetched when the dashboard is accessed.
+  // scheduleStore.loadInitialData(); // Ensure data is loaded
+  // Note: scheduleStore.loadInitialData is already called in SurgerySchedulingScreen on mount.
+  // We might need a separate, lighter dashboard-specific data fetch action later.
 });
 </script>
 
 <style scoped>
-/* Define CSS variables for consistent colors */
+/* Remove local :root - global variables are in src/style.css */
+/*
 :root {
   --color-white: #ffffff;
   --color-primary: #0075c2;
@@ -240,106 +293,95 @@ onMounted(() => {
   --color-dark-gray: #555555;
   --color-very-dark-gray: #333333;
 }
+*/
 
-/* TODO: Manage colors using CSS variables or a color palette for consistency across the application. */
 .dashboard-container {
-  padding: 20px;
+  padding: var(--spacing-md); /* Use global spacing variable */
 }
 
 .dashboard-widgets {
   display: grid;
+  /* Use global spacing variables for gap */
+  gap: var(--spacing-md); /* Space between widgets */
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsive grid */
-  gap: 20px; /* Space between widgets */
-  margin-top: 20px;
+  margin-top: var(--spacing-md); /* Use global spacing variable */
 }
 
 .widget {
-  background-color: var(--color-white);
-  padding: 20px;
-  border-radius: 8px;
+  background-color: var(--color-white); /* Use global white variable */
+  padding: var(--spacing-md); /* Use global spacing variable */
+  border-radius: var(--border-radius-sm); /* Use global border radius variable */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--color-mid-light-gray); /* Subtle border */
+  border: 1px solid var(--color-border); /* Use global border variable */
 }
 
 .widget h2 {
-  font-size: 1.3em;
+  font-size: var(--font-size-lg); /* Use global font size variable */
   margin-top: 0;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--color-mid-light-gray); /* Separator */
-  color: var(--color-very-dark-gray);
+  margin-bottom: var(--spacing-md); /* Use global spacing variable */
+  padding-bottom: var(--spacing-sm); /* Use global spacing variable */
+  border-bottom: 1px solid var(--color-border-soft); /* Use global border variable */
+  color: var(--color-very-dark-gray); /* Use global text color variable */
 }
 
 /* Quick Actions Widget Specific Styles */
-.quick-actions-widget .quick-action-buttons {
+.quick-actions-widget .quick-action-buttons,
+.conflict-details-widget .conflict-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px; /* Space between buttons */
+  gap: var(--spacing-sm); /* Use global spacing variable */
 }
 
-.quick-actions-widget button {
-  /* Inherits base button styles */
-  padding: 10px 15px; /* Adjust padding */
-  font-size: 0.95em;
-  cursor: pointer;
-  border-radius: 4px;
-  border: none;
-  background-color: var(--color-primary);
-  color: var(--color-white);
-  transition: background-color 0.2s ease;
+.quick-actions-widget button,
+.conflict-details-widget button {
+  /* Inherits base button styles from global style.css */
+  /* You can add minor overrides here if needed */
 }
 
-.quick-actions-widget button:hover {
-  background-color: #005a94; /* Darker primary on hover */
+.quick-actions-widget .btn-secondary,
+.conflict-details-widget .btn-secondary {
+    /* Inherits .btn-secondary styles from global style.css */
 }
 
-.quick-actions-widget .button-secondary {
-  background-color: var(--color-secondary); /* Use secondary color for some actions */
-  color: var(--color-white);
-}
-
-.quick-actions-widget .button-secondary:hover {
-  background-color: #5a6268; /* Darker secondary on hover */
-}
 
 /* KPI Widget Specific Styles */
 .kpi-list {
   display: grid;
   grid-template-columns: 1fr 1fr; /* Two columns for KPI items */
-  gap: 15px;
+  gap: var(--spacing-sm); /* Use global spacing variable */
 }
 
 .kpi-item {
   text-align: left;
-  cursor: pointer; /* Indicate it's clickable */
-  transition: background-color 0.2s ease; /* Smooth transition for hover effect */
-  padding: 10px;
-  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  padding: var(--spacing-sm); /* Use global spacing variable */
+  border-radius: var(--border-radius-sm); /* Use global border radius variable */
 }
 
 .kpi-item:hover {
-  background-color: var(--color-light-gray); /* Subtle background change on hover */
+  background-color: var(--color-background-soft); /* Use global background variable */
 }
 
 .kpi-item .kpi-label {
   display: block;
-  font-size: 0.9em;
-  color: var(--color-dark-gray); /* Or a slightly lighter shade if needed */
-  margin-bottom: 6px; /* Increased spacing */
+  font-size: var(--font-size-sm); /* Use global font size variable */
+  color: var(--color-dark-gray); /* Use global text color variable */
+  margin-bottom: var(--spacing-xs); /* Use global spacing variable */
 }
 
 .kpi-item .kpi-value {
-  font-size: 1.5em; /* Increased font size */
-  font-weight: bold;
-  color: var(--color-primary);
-  line-height: 1.2; /* Adjust line height if needed */
+  font-size: var(--font-size-xl); /* Use global font size variable */
+  font-weight: var(--font-weight-bold); /* Use global font weight variable */
+  color: var(--color-primary); /* Use global primary color variable */
+  line-height: 1.2;
 }
 
-/* Specific widget adjustments can go here */
+/* Specific widget adjustments */
 .schedule-overview-widget p,
 .pending-surgeries-widget p {
-  font-size: 0.9em;
-  color: var(--color-dark-gray);
+  font-size: var(--font-size-sm); /* Use global font size variable */
+  color: var(--color-dark-gray); /* Use global text color variable */
 }
 
 .alerts-widget ul,
@@ -355,10 +397,10 @@ onMounted(() => {
 .sdst-conflicts-widget li,
 .pending-surgeries-widget li,
 .schedule-overview-widget li {
-  margin-bottom: 8px;
-  padding: 8px;
-  border-bottom: 1px dashed var(--color-light-gray);
-  font-size: 0.95em;
+  margin-bottom: var(--spacing-xs); /* Use global spacing variable */
+  padding: var(--spacing-xs); /* Use global spacing variable */
+  border-bottom: 1px dashed var(--color-border-soft); /* Use global border variable */
+  font-size: var(--font-size-base); /* Use global font size variable */
 }
 
 .alerts-widget li:last-child,
@@ -371,41 +413,52 @@ onMounted(() => {
 .pending-surgeries-widget li,
 .alerts-widget li,
 .sdst-conflicts-widget li {
-  cursor: pointer; /* Indicate it's clickable */
-  transition: background-color 0.2s ease; /* Smooth transition for hover effect */
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-left: 5px solid transparent; /* Add space for potential status indicator */
+  padding-left: var(--spacing-sm); /* Adjust padding */
 }
 
 .pending-surgeries-widget li:hover,
 .alerts-widget li:hover,
 .sdst-conflicts-widget li:hover {
-  background-color: var(--color-light-gray); /* Subtle background change on hover */
+  background-color: var(--color-background-soft); /* Use global background variable */
 }
 
 .no-items {
   text-align: center;
-  color: var(--color-mid-gray);
+  color: var(--color-dark-gray); /* Use global text color variable */
   font-style: italic;
 }
 
 .loading-message {
-  font-size: 1.2em;
-  color: var(--color-dark-gray);
+  font-size: var(--font-size-lg); /* Use global font size variable */
+  color: var(--color-dark-gray); /* Use global text color variable */
   text-align: center;
-  padding: 20px;
+  padding: var(--spacing-md); /* Use global spacing variable */
 }
 
-/* Add specific styling for alerts/conflicts later */
+/* Specific styling for alerts/conflicts using global color variables */
 .alert-item {
-  border-left: 5px solid var(--color-danger);
-  padding-left: 15px; /* Add space for the border */
+  border-left-color: var(--color-danger); /* Red color for alerts */
   color: var(--color-danger); /* Use danger color for alerts */
-  font-weight: 500;
+  font-weight: var(--font-weight-medium); /* Use global font weight variable */
 }
 
 .conflict-item {
+  border-left-color: var(--color-warning); /* Yellow color for conflicts */
   color: var(--color-warning); /* Use warning color for conflicts */
-  font-weight: 500;
-  border-left: 5px solid var(--color-warning);
-  padding-left: 15px; /* Add space for the border */
+  font-weight: var(--font-weight-medium); /* Use global font weight variable */
+}
+
+.schedule-item-conflict {
+    color: var(--color-warning); /* Warning icon color */
+    margin-left: var(--spacing-xs); /* Space after text */
+}
+
+.conflict-details-widget .conflict-actions {
+    margin-top: var(--spacing-md); /* Space above action buttons */
+    padding-top: var(--spacing-md); /* Space above action buttons */
+     border-top: 1px solid var(--color-border-soft);
 }
 </style>

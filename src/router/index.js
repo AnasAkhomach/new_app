@@ -1,8 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { ref } from 'vue';
+// import { ref } from 'vue'; // No longer needed as auth state is in Pinia store
 
 import LoginScreen from '../components/LoginScreen.vue';
-import AppLayout from '../components/AppLayout.vue'; // Import the layout component
+import AppLayout from '../components/AppLayout.vue';
 import DashboardScreen from '../components/DashboardScreen.vue';
 // Import other placeholder components
 import SchedulingScreen from '../components/SchedulingScreen.vue';
@@ -13,15 +13,18 @@ import NotificationsScreen from '../components/NotificationsScreen.vue';
 import AdministrationScreen from '../components/AdministrationScreen.vue';
 import MyProfileSettingsScreen from '../components/MyProfileSettingsScreen.vue';
 import HelpDocumentationScreen from '../components/HelpDocumentationScreen.vue';
-import NotFound from '../components/NotFound.vue'; // Import the new NotFound component
+import NotFound from '../components/NotFound.vue';
 
-// Simple authentication state (for simulation)
-const isAuthenticated = ref(false);
+// Import the authentication store
+import { useAuthStore } from '@/stores/authStore';
 
-// Function to set authentication status
-const setAuthenticated = (status) => {
-  isAuthenticated.value = status;
-};
+// Simple authentication state (for simulation) - REMOVED, using authStore instead
+// const isAuthenticated = ref(false);
+
+// Function to set authentication status - REMOVED, authStore handles this
+// const setAuthenticated = (status) => {
+//   isAuthenticated.value = status;
+// };
 
 const routes = [
   {
@@ -90,7 +93,6 @@ const routes = [
   {
     path: '/:pathMatch(.*)*', // Catch-all route
     name: 'NotFound',
-    // Use the imported 404 component
     component: NotFound
   }
 ];
@@ -103,11 +105,13 @@ const router = createRouter({
 // Navigation guard
 router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+  // Use the auth store to check authentication status
+  const authStore = useAuthStore(); // Get store instance inside the guard
 
-  if (requiresAuth && !isAuthenticated.value) {
+  if (requiresAuth && !authStore.isAuthenticated) {
     // User is not authenticated and route requires auth, redirect to login
     next({ name: 'Login', query: { redirect: to.fullPath } });
-  } else if (to.name === 'Login' && isAuthenticated.value) {
+  } else if (to.name === 'Login' && authStore.isAuthenticated) {
     // If the user is authenticated and tries to go to login, redirect to dashboard
      next({ name: 'Dashboard' });
   }else {
@@ -116,5 +120,6 @@ router.beforeEach((to, from, next) => {
   }
 });
 
+// export { setAuthenticated }; // REMOVED, authStore handles setting auth state
+
 export default router;
-export { setAuthenticated }; // Export the function to be used in LoginScreen

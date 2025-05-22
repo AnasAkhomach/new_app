@@ -1,4 +1,5 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia' // Add Pinia import
 import './style.css'
 import App from './App.vue'
 import router from './router' // Import the router instance
@@ -6,6 +7,7 @@ import 'vue-toastification/dist/index.css'; // Import the CSS FIRST
 import Toast from 'vue-toastification'; // Import vue-toastification
 
 const app = createApp(App);
+const pinia = createPinia(); // Create Pinia instance
 
 // Test app.provide directly
 try {
@@ -20,6 +22,7 @@ try {
   console.error('Error encountered while testing app.provide directly in main.js:', e);
 }
 
+app.use(pinia); // Install Pinia BEFORE mounting
 app.use(router); // Use the router
 app.use(Toast); // Use vue-toastification
 

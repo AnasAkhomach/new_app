@@ -64,6 +64,17 @@ const errors = ref({ // Added for validation errors
   status: ''
 });
 
+// Functions to clear errors
+const clearError = (field) => {
+  if (errors.value[field]) {
+    errors.value[field] = '';
+  }
+};
+
+const clearAllErrors = () => {
+  errors.value = { name: '', status: '' };
+};
+
 const isEditMode = computed(() => !!props.orToEdit);
 const formTitle = computed(() => isEditMode.value ? 'Edit Operating Room' : 'Add New Operating Room');
 const submitButtonText = computed(() => isEditMode.value ? 'Update OR' : 'Save OR');
@@ -90,16 +101,6 @@ const validateForm = () => {
     isValid = false;
   }
   return isValid;
-};
-
-const clearError = (field) => {
-  if (errors.value[field]) {
-    errors.value[field] = '';
-  }
-};
-
-const clearAllErrors = () => {
-  errors.value = { name: '', status: '' };
 };
 
 const handleSubmit = () => {
