@@ -92,7 +92,7 @@ const isLoading = ref(false); // State to manage loading indicator
 // In a real app, this would interact with an authentication service or store
 const handleLogin = async () => {
   loginError.value = ''; // Clear previous errors
-  registrationSuccess.value = ''; // Clear registration success message on login attempt
+  // registrationSuccess is not cleared here to allow it to persist after registration
 
   if (!username.value || !password.value) {
     loginError.value = 'Please enter both username and password.';
@@ -140,7 +140,7 @@ const handleLogin = async () => {
 const handleRegister = async () => {
   loginError.value = ''; // Clear login errors on register attempt
   registrationError.value = '';
-  registrationSuccess.value = '';
+  registrationSuccess.value = ''; // Clear previous success/error messages
 
   if (!newUsername.value || !newPassword.value || !confirmPassword.value) {
     registrationError.value = 'Please fill in all fields.';
@@ -193,6 +193,9 @@ const toggleForm = () => {
   loginError.value = ''; // Clear errors when toggling
   registrationError.value = '';
   // registrationSuccess.value = ''; // Keep success message visible after registration
+  loginError.value = ''; // Clear login error
+  registrationError.value = ''; // Clear registration error
+  registrationSuccess.value = ''; // Clear success message when form is manually toggled
   // Clear input fields when toggling
   username.value = '';
   password.value = '';

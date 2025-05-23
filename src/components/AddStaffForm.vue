@@ -74,6 +74,16 @@ const isEditMode = computed(() => !!props.staffToEdit);
 const formTitle = computed(() => isEditMode.value ? 'Edit Staff Member' : 'Add New Staff Member');
 const submitButtonText = computed(() => isEditMode.value ? 'Update Staff' : 'Save Staff');
 
+const clearError = (field) => {
+  if (errors.value[field]) {
+    errors.value[field] = '';
+  }
+};
+
+const clearAllErrors = () => {
+  errors.value = {};
+};
+
 // Watch for changes in staffToEdit prop to pre-fill form
 watch(() => props.staffToEdit, (newStaff) => {
   clearAllErrors(); // Clear errors when staffToEdit changes
@@ -92,15 +102,6 @@ watch(() => staffData.value.specializationsString, (newValue) => {
     staffData.value.specializations = newValue.split(',').map(s => s.trim()).filter(s => s);
 });
 
-const clearError = (field) => {
-  if (errors.value[field]) {
-    errors.value[field] = '';
-  }
-};
-
-const clearAllErrors = () => {
-  errors.value = {};
-};
 
 const validateForm = () => {
   clearAllErrors();
@@ -135,6 +136,7 @@ const handleSubmit = () => {
     console.log('Submitting new Staff data:', payload);
     emit('save', payload);
   }
+  staffData.value = initialStaffData(); // Reset form after successful submission
   clearAllErrors(); // Clear errors on successful submission
 };
 
