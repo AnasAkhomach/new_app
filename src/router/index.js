@@ -7,8 +7,12 @@ import DashboardScreen from '../components/DashboardScreen.vue';
 // Import other placeholder components
 import SchedulingScreen from '../components/SchedulingScreen.vue';
 import ResourceManagementScreen from '../components/ResourceManagementScreen.vue';
-import SDSTDataManagementScreen from '../components/SDSTDataManagementScreen.vue';
+import SDSTManagementScreen from '../components/SDSTManagementScreen.vue';
 import ReportingAnalyticsScreen from '../components/ReportingAnalyticsScreen.vue';
+import AnalyticsDashboard from '../components/AnalyticsDashboard.vue';
+import UtilizationReports from '../components/UtilizationReports.vue';
+import SchedulingEfficiencyReports from '../components/SchedulingEfficiencyReports.vue';
+import CustomReportBuilder from '../components/CustomReportBuilder.vue';
 import NotificationsScreen from '../components/NotificationsScreen.vue';
 import AdministrationScreen from '../components/AdministrationScreen.vue';
 import MyProfileSettingsScreen from '../components/MyProfileSettingsScreen.vue';
@@ -55,12 +59,33 @@ const routes = [
         {
             path: '/sdst-data-management',
             name: 'SDSTDataManagement',
-            component: SDSTDataManagementScreen,
+            component: SDSTManagementScreen,
         },
         {
             path: '/reporting-analytics',
-            name: 'ReportingAnalytics',
             component: ReportingAnalyticsScreen,
+            children: [
+                {
+                    path: '',
+                    name: 'AnalyticsDashboard',
+                    component: AnalyticsDashboard,
+                },
+                {
+                    path: 'utilization',
+                    name: 'UtilizationReports',
+                    component: UtilizationReports,
+                },
+                {
+                    path: 'efficiency',
+                    name: 'SchedulingEfficiencyReports',
+                    component: SchedulingEfficiencyReports,
+                },
+                {
+                    path: 'custom',
+                    name: 'CustomReportBuilder',
+                    component: CustomReportBuilder,
+                },
+            ],
         },
         {
             path: '/notifications',

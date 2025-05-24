@@ -66,14 +66,10 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-// We'll use a dedicated auth store instead of directly importing setAuthenticated
-// import { setAuthenticated } from '../router';
-
-// Assuming an auth store will be created later
-// import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/stores/authStore';
 
 const router = useRouter();
-// const authStore = useAuthStore(); // Initialize auth store
+const authStore = useAuthStore(); // Initialize auth store
 
 const username = ref('');
 const password = ref('');
@@ -88,11 +84,9 @@ const registrationSuccess = ref('');
 
 const isLoading = ref(false); // State to manage loading indicator
 
-// --- Placeholder/Simulated Authentication Logic ---
-// In a real app, this would interact with an authentication service or store
+// --- Authentication Logic ---
 const handleLogin = async () => {
   loginError.value = ''; // Clear previous errors
-  // registrationSuccess is not cleared here to allow it to persist after registration
 
   if (!username.value || !password.value) {
     loginError.value = 'Please enter both username and password.';
@@ -101,39 +95,20 @@ const handleLogin = async () => {
 
   isLoading.value = true; // Show loading indicator
 
-  // --- Simulate API Call for Login ---
-  console.log('Simulating login attempt...');
   try {
-    // In a real app, call authStore.login(username.value, password.value);
-    // await authStore.login(username.value, password.value);
-
-    // Simulate a successful login after a delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Simulate checking credentials (replace with actual auth check)
-     const users = JSON.parse(localStorage.getItem('users' ) || '[]');
-     const user = users.find(u => u.username === username.value && u.password === password.value);
-
-
-    if (user) {
-      console.log('Simulated login successful.');
-      // In a real app, the auth store would handle setting auth state and potentially redirecting
-      // For now, we simulate setting a flag and redirecting manually
-       localStorage.setItem('isAuthenticated', 'true');
-       router.push({ name: 'Dashboard' }); // Redirect to Dashboard route name
-
-    } else {
-      console.warn('Simulated login failed: Invalid credentials.');
-      loginError.value = 'Invalid username or password.';
-       localStorage.setItem('isAuthenticated', 'false');
+    await authStore.login(username.value, password.value);
+    // Check if there was an error from the auth store
+    if (authStore.error) {
+      loginError.value = authStore.error;
+    } else if (authStore.isAuthenticated) {
+      // Successful login - redirect is handled by the authStore
+      router.push({ name: 'Dashboard' });
     }
-
   } catch (error) {
-    console.error('Simulated login error:', error);
-    loginError.value = 'An error occurred during login.';
-     localStorage.setItem('isAuthenticated', 'false');
+    console.error('Login component error:', error);
+    loginError.value = 'An unexpected error occurred during login.';
   } finally {
-    isLoading.value = false; // Hide loading indicator
+    isLoading.value = false;
   }
 };
 
@@ -153,38 +128,23 @@ const handleRegister = async () => {
 
   isLoading.value = true; // Show loading indicator
 
-  // --- Simulate API Call for Registration ---
-  console.log('Simulating registration attempt...');
   try {
-    // In a real app, call authStore.register(newUsername.value, newPassword.value);
-    // await authStore.register(newUsername.value, newPassword.value);
-
-    // Simulate a registration attempt after a delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Simulate checking if username exists and saving
-     const users = JSON.parse(localStorage.getItem('users' ) || '[]');
-     if (users.find(u => u.username === newUsername.value)) {
-       console.warn('Simulated registration failed: Username exists.');
-       registrationError.value = 'Username already exists.';
-     } else {
-       users.push({ username: newUsername.value, password: newPassword.value });
-       localStorage.setItem('users', JSON.stringify(users));
-       console.log('Simulated registration successful.');
-       registrationSuccess.value = 'Account created successfully! Please log in.';
-
-        // Clear registration form fields
-        newUsername.value = '';
-        newPassword.value = '';
-        confirmPassword.value = '';
-        isRegistering.value = false; // Automatically switch to login form
-     }
-
+    const success = await authStore.register(newUsername.value, newPassword.value);
+    if (success) {
+      registrationSuccess.value = 'Account created successfully! Please log in.';
+      newUsername.value = '';
+      newPassword.value = '';
+      confirmPassword.value = '';
+      isRegistering.value = false; // Switch to login form
+    } else {
+      // Check authStore.error for the specific error message
+      registrationError.value = authStore.error || 'Registration failed.';
+    }
   } catch (error) {
-    console.error('Simulated registration error:', error);
-    registrationError.value = 'An error occurred during registration.';
+    console.error('Registration component error:', error);
+    registrationError.value = 'An unexpected error occurred during registration.';
   } finally {
-    isLoading.value = false; // Hide loading indicator
+    isLoading.value = false;
   }
 };
 
@@ -192,9 +152,6 @@ const toggleForm = () => {
   isRegistering.value = !isRegistering.value;
   loginError.value = ''; // Clear errors when toggling
   registrationError.value = '';
-  // registrationSuccess.value = ''; // Keep success message visible after registration
-  loginError.value = ''; // Clear login error
-  registrationError.value = ''; // Clear registration error
   registrationSuccess.value = ''; // Clear success message when form is manually toggled
   // Clear input fields when toggling
   username.value = '';
@@ -205,15 +162,6 @@ const toggleForm = () => {
       confirmPassword.value = '';
   }
 };
-
-// In a real application, you would check authentication status on mount
-// and redirect if already authenticated.
-// onMounted(() => {
-//   if (authStore.isAuthenticated) {
-//     router.push({ name: 'Dashboard' });
-//   }
-// });
-
 </script>
 
 <style scoped>

@@ -28,6 +28,10 @@
           @cancel="handleCancelOrForm"
           @save="handleSaveOr"
         />
+        <div v-if="isLoading" class="loading-indicator">
+          <div class="spinner"></div>
+          <p>Loading operating rooms...</p>
+        </div>
         <table v-else>
           <thead>
             <tr>
@@ -46,7 +50,7 @@
               <td>{{ or.primaryService }}</td>
               <td>
                 <button class="button-small" @click="openOrFormForEdit(or)">View/Edit</button>
-                <button class="button-small button-danger" @click="deleteOr(or)">Delete</button>  <!-- Pass the whole 'or' object -->
+                <button class="button-small button-danger" @click="deleteOr(or)">Delete</button>
               </td>
             </tr>
             <tr v-if="operatingRooms.length === 0">
@@ -66,6 +70,10 @@
           @cancel="handleCancelStaffForm"
           @save="handleSaveStaff"
         />
+        <div v-if="isLoading" class="loading-indicator">
+          <div class="spinner"></div>
+          <p>Loading staff data...</p>
+        </div>
         <table v-else>
           <thead>
             <tr>
@@ -84,7 +92,7 @@
               <td :class="'status-' + person.status.toLowerCase().replace(' ', '-')">{{ person.status }}</td>
               <td>
                 <button class="button-small" @click="openStaffFormForEdit(person)">View/Edit</button>
-                <button class="button-small button-danger" @click="deleteStaff(person)">Delete</button> <!-- Pass the whole 'person' object -->
+                <button class="button-small button-danger" @click="deleteStaff(person)">Delete</button>
               </td>
             </tr>
             <tr v-if="staff.length === 0">
@@ -104,6 +112,10 @@
           @cancel="handleCancelEquipmentForm"
           @save="handleSaveEquipment"
         />
+        <div v-if="isLoading" class="loading-indicator">
+          <div class="spinner"></div>
+          <p>Loading equipment data...</p>
+        </div>
         <table v-else>
           <thead>
             <tr>
@@ -122,7 +134,7 @@
               <td>{{ item.location }}</td>
               <td>
                 <button class="button-small" @click="openEquipmentFormForEdit(item)">View/Edit</button>
-                <button class="button-small button-danger" @click="deleteEquipment(item)">Delete</button> <!-- Pass the whole 'item' object -->
+                <button class="button-small button-danger" @click="deleteEquipment(item)">Delete</button>
               </td>
             </tr>
             <tr v-if="equipment.length === 0">
@@ -142,19 +154,72 @@
       @cancel="handleCancelDelete"
     />
 
+    <!-- Resource Availability Calendar Modal -->
+    <div v-if="showAvailabilityModal" class="modal-overlay">
+      <div class="modal-content availability-modal">
+        <div class="modal-header">
+          <h3>Resource Availability</h3>
+          <button class="close-button" @click="closeAvailabilityModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <ResourceAvailabilityCalendar
+            v-if="selectedResourceForAvailability"
+            :resource="selectedResourceForAvailability"
+            :resourceType="selectedResourceType"
+            @update="handleAvailabilityUpdate"
+            @close="closeAvailabilityModal"
+          />
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useToast } from 'vue-toastification'; // Add this import
+import { ref, onMounted, computed } from 'vue';
+import { useToast } from 'vue-toastification';
+import { useResourceStore } from '@/stores/resourceStore';
+import { storeToRefs } from 'pinia';
 import AddOrForm from './AddOrForm.vue';
 import AddStaffForm from './AddStaffForm.vue';
 import AddEquipmentForm from './AddEquipmentForm.vue';
-import ConfirmationModal from './ConfirmationModal.vue'; // Added import
+import ConfirmationModal from './ConfirmationModal.vue';
+import ResourceAvailabilityCalendar from './ResourceAvailabilityCalendar.vue';
 
-const toast = useToast(); // Initialize useToast
+const toast = useToast();
 const activeTab = ref('ors'); // Default active tab
+
+// Initialize the resource store
+const resourceStore = useResourceStore();
+const { isLoading, error, operatingRooms, staff, equipment } = storeToRefs(resourceStore);
+
+// Load resources when component is mounted
+onMounted(async () => {
+  await resourceStore.loadResources();
+});
+
+// --- Resource Availability Calendar State & Logic ---
+const showAvailabilityModal = ref(false);
+const selectedResourceForAvailability = ref(null);
+const selectedResourceType = ref('');
+
+const openAvailabilityCalendar = (resource, type) => {
+  selectedResourceForAvailability.value = resource;
+  selectedResourceType.value = type;
+  showAvailabilityModal.value = true;
+};
+
+const closeAvailabilityModal = () => {
+  showAvailabilityModal.value = false;
+  selectedResourceForAvailability.value = null;
+  selectedResourceType.value = '';
+};
+
+const handleAvailabilityUpdate = () => {
+  toast.success('Resource availability updated successfully!');
+  // No need to close the modal here, let the user continue editing if needed
+};
 
 // --- Confirmation Modal State & Logic ---
 const showConfirmationModal = ref(false);
@@ -171,42 +236,35 @@ const openConfirmationModal = (item, type, title, message) => {
   showConfirmationModal.value = true;
 };
 
-const handleConfirmDelete = async () => { // Make the function async
+const handleConfirmDelete = async () => {
   if (!itemToDelete.value || !itemTypeToDelete.value) return;
 
   const item = itemToDelete.value;
   const type = itemTypeToDelete.value;
-  const itemName = item.name; // Get item name before potential deletion
+  const itemName = item.name;
   const itemTypeDisplay = type.charAt(0).toUpperCase() + type.slice(1);
 
-  // Simulate API call
   try {
-    // Simulate a delay and potential failure
-    await new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Randomly succeed or fail for demonstration purposes
-        if (Math.random() > 0.2) { // 80% chance of success
-          resolve({ success: true });
-        } else {
-          reject(new Error('Simulated backend error'));
-        }
-      }, 1000); // 1 second delay
-    });
+    let result;
 
-    // If successful, update the local array
+    // Call the appropriate store method based on the item type
     if (type === 'or') {
-      operatingRooms.value = operatingRooms.value.filter(or => or.id !== item.id);
+      result = await resourceStore.deleteOperatingRoom(item.id);
     } else if (type === 'staff') {
-      staff.value = staff.value.filter(s => s.id !== item.id);
+      result = await resourceStore.deleteStaff(item.id);
     } else if (type === 'equipment') {
-      equipment.value = equipment.value.filter(e => e.id !== item.id);
+      result = await resourceStore.deleteEquipment(item.id);
     }
-    console.log(`Deleted ${type}:`, item);
-    toast.success(`${itemTypeDisplay} '${itemName}' deleted successfully!`);
 
+    if (result.success) {
+      console.log(`Deleted ${type}:`, item);
+      toast.success(`${itemTypeDisplay} '${itemName}' deleted successfully!`);
+    } else {
+      throw new Error(result.error || 'Unknown error');
+    }
   } catch (error) {
     console.error(`Failed to delete ${type}:`, item, error);
-    toast.error(`Failed to delete ${itemTypeDisplay} '${itemName}'. Please try again.`);
+    toast.error(`Failed to delete ${itemTypeDisplay} '${itemName}': ${error.message}`);
   }
 
   handleCancelDelete(); // Close modal and reset state regardless of outcome
@@ -223,44 +281,57 @@ const handleCancelDelete = () => {
 // --- OR Management State & Logic ---
 const showAddOrForm = ref(false);
 const currentOrToEdit = ref(null);
-const operatingRooms = ref([
-  { id: 1, name: 'OR 1', location: 'Main Building, 2nd Floor', status: 'Active', primaryService: 'General Surgery' },
-  { id: 2, name: 'OR 2', location: 'Main Building, 2nd Floor', status: 'Active', primaryService: 'Orthopedics' },
-  { id: 3, name: 'OR 3', location: 'Main Building, 3rd Floor', status: 'Under Maintenance', primaryService: 'Cardiac Surgery' },
-]);
+
+// Computed property for active operating rooms
+const activeOperatingRooms = computed(() => resourceStore.activeOperatingRooms);
 
 const openOrFormForAdd = () => {
   currentOrToEdit.value = null;
   showAddOrForm.value = true;
 };
+
 const openOrFormForEdit = (or) => {
   currentOrToEdit.value = { ...or };
   showAddOrForm.value = true;
 };
+
 const handleCancelOrForm = () => {
   showAddOrForm.value = false;
   currentOrToEdit.value = null;
 };
-const handleSaveOr = (orData) => {
-  if (currentOrToEdit.value) {
-    // Editing existing OR
-    const index = operatingRooms.value.findIndex(or => or.id === orData.id);
-    if (index !== -1) {
-      operatingRooms.value[index] = { ...operatingRooms.value[index], ...orData };
-      toast.success(`Operating Room '${orData.name}' updated successfully!`); // Add this line
+
+const handleSaveOr = async (orData) => {
+  if (isLoading.value) return; // Prevent multiple submissions
+
+  try {
+    if (currentOrToEdit.value) {
+      // Editing existing OR
+      const result = await resourceStore.updateOperatingRoom(orData.id, orData);
+      if (result.success) {
+        toast.success(`Operating Room '${orData.name}' updated successfully!`);
+      } else {
+        toast.error(`Failed to update Operating Room: ${result.error}`);
+      }
+    } else {
+      // Adding new OR
+      const result = await resourceStore.addOperatingRoom(orData);
+      if (result.success) {
+        toast.success(`Operating Room '${orData.name}' added successfully!`);
+      } else {
+        toast.error(`Failed to add Operating Room: ${result.error}`);
+      }
     }
-  } else {
-    // Adding new OR
-    const newOr = {
-      id: Date.now().toString(), // Simple unique ID generator
-      ...orData,
-    };
-    operatingRooms.value.push(newOr);
-    toast.success(`Operating Room '${orData.name}' added successfully!`); // Add this line
+    showAddOrForm.value = false;
+    currentOrToEdit.value = null;
+  } catch (err) {
+    toast.error(`An error occurred: ${err.message}`);
   }
-  showAddOrForm.value = false;
-  currentOrToEdit.value = null;
 };
+
+const viewOrAvailability = (orItem) => {
+  openAvailabilityCalendar(orItem, 'operatingRoom');
+};
+
 const deleteOr = (orItem) => {
   openConfirmationModal(
     orItem,
@@ -273,44 +344,57 @@ const deleteOr = (orItem) => {
 // --- Staff Management State & Logic ---
 const showAddStaffForm = ref(false);
 const currentStaffToEdit = ref(null);
-const staff = ref([
-  { id: 101, name: 'Dr. Jane Smith', role: 'Surgeon', specializations: ['Orthopedics', 'Sports Medicine'], status: 'Active' },
-  { id: 102, name: 'Nurse John Doe', role: 'Scrub Nurse', specializations: ['General Surgery'], status: 'Active' },
-  { id: 103, name: 'Dr. Emily Carter', role: 'Anesthetist', specializations: [], status: 'On Leave' },
-]);
+
+// Computed property for active staff
+const activeStaff = computed(() => resourceStore.activeStaff);
 
 const openStaffFormForAdd = () => {
   currentStaffToEdit.value = null;
   showAddStaffForm.value = true;
 };
+
 const openStaffFormForEdit = (staffMember) => {
   currentStaffToEdit.value = { ...staffMember };
   showAddStaffForm.value = true;
 };
+
 const handleCancelStaffForm = () => {
   showAddStaffForm.value = false;
   currentStaffToEdit.value = null;
 };
-const handleSaveStaff = (staffData) => {
-  if (currentStaffToEdit.value) {
-    // Editing existing staff
-    const index = staff.value.findIndex(s => s.id === staffData.id);
-    if (index !== -1) {
-      staff.value[index] = { ...staff.value[index], ...staffData };
-      toast.success(`Staff member '${staffData.name}' updated successfully!`); // Add this line
+
+const handleSaveStaff = async (staffData) => {
+  if (isLoading.value) return; // Prevent multiple submissions
+
+  try {
+    if (currentStaffToEdit.value) {
+      // Editing existing staff
+      const result = await resourceStore.updateStaff(staffData.id, staffData);
+      if (result.success) {
+        toast.success(`Staff member '${staffData.name}' updated successfully!`);
+      } else {
+        toast.error(`Failed to update staff member: ${result.error}`);
+      }
+    } else {
+      // Adding new staff
+      const result = await resourceStore.addStaff(staffData);
+      if (result.success) {
+        toast.success(`Staff member '${staffData.name}' added successfully!`);
+      } else {
+        toast.error(`Failed to add staff member: ${result.error}`);
+      }
     }
-  } else {
-    // Adding new staff
-    const newStaff = {
-      id: Date.now().toString(), // Simple unique ID generator
-      ...staffData,
-    };
-    staff.value.push(newStaff);
-    toast.success(`Staff member '${staffData.name}' added successfully!`); // Add this line
+    showAddStaffForm.value = false;
+    currentStaffToEdit.value = null;
+  } catch (err) {
+    toast.error(`An error occurred: ${err.message}`);
   }
-  showAddStaffForm.value = false;
-  currentStaffToEdit.value = null;
 };
+
+const viewStaffAvailability = (staffItem) => {
+  openAvailabilityCalendar(staffItem, 'staff');
+};
+
 const deleteStaff = (staffItem) => {
   openConfirmationModal(
     staffItem,
@@ -322,12 +406,10 @@ const deleteStaff = (staffItem) => {
 
 // --- Equipment Management State & Logic ---
 const showAddEquipmentForm = ref(false);
-const currentEquipmentToEdit = ref(null); // Added for equipment editing
-const equipment = ref([
-  { id: 201, name: 'C-Arm Unit 1', type: 'C-Arm', status: 'Available', location: 'Storage Room A' },
-  { id: 202, name: 'Anesthesia Machine B', type: 'Anesthesia Machine', status: 'In Use', location: 'OR 2' },
-  { id: 203, name: 'Microscope Model X', type: 'Surgical Microscope', status: 'Available', location: 'Storage Room B' },
-]);
+const currentEquipmentToEdit = ref(null);
+
+// Computed property for available equipment
+const availableEquipment = computed(() => resourceStore.availableEquipment);
 
 const openEquipmentFormForAdd = () => {
   currentEquipmentToEdit.value = null;
@@ -344,25 +426,36 @@ const handleCancelEquipmentForm = () => {
   currentEquipmentToEdit.value = null;
 };
 
-const handleSaveEquipment = (equipmentData) => {
-  if (currentEquipmentToEdit.value) {
-    // Editing existing equipment
-    const index = equipment.value.findIndex(eq => eq.id === equipmentData.id);
-    if (index !== -1) {
-      equipment.value[index] = { ...equipment.value[index], ...equipmentData };
-      toast.success(`Equipment '${equipmentData.name}' updated successfully!`); // Add this line
+const handleSaveEquipment = async (equipmentData) => {
+  if (isLoading.value) return; // Prevent multiple submissions
+
+  try {
+    if (currentEquipmentToEdit.value) {
+      // Editing existing equipment
+      const result = await resourceStore.updateEquipment(equipmentData.id, equipmentData);
+      if (result.success) {
+        toast.success(`Equipment '${equipmentData.name}' updated successfully!`);
+      } else {
+        toast.error(`Failed to update equipment: ${result.error}`);
+      }
+    } else {
+      // Adding new equipment
+      const result = await resourceStore.addEquipment(equipmentData);
+      if (result.success) {
+        toast.success(`Equipment '${equipmentData.name}' added successfully!`);
+      } else {
+        toast.error(`Failed to add equipment: ${result.error}`);
+      }
     }
-  } else {
-    // Adding new equipment
-    const newEquipment = {
-      id: Date.now().toString(), // Simple unique ID generator
-      ...equipmentData,
-    };
-    equipment.value.push(newEquipment);
-    toast.success(`Equipment '${equipmentData.name}' added successfully!`); // Add this line
+    showAddEquipmentForm.value = false;
+    currentEquipmentToEdit.value = null;
+  } catch (err) {
+    toast.error(`An error occurred: ${err.message}`);
   }
-  showAddEquipmentForm.value = false;
-  currentEquipmentToEdit.value = null;
+};
+
+const viewEquipmentAvailability = (equipmentItem) => {
+  openAvailabilityCalendar(equipmentItem, 'equipment');
 };
 
 const deleteEquipment = (equipmentItem) => {
@@ -512,6 +605,89 @@ th {
 .status-in-use {
     color: #fd7e14; /* Orange */
     font-weight: bold;
+}
+
+/* Loading indicator styles */
+.loading-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  color: var(--color-dark-gray);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(0, 123, 255, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--color-primary);
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.availability-modal {
+  padding: 0;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #666;
+}
+
+.close-button:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 0;
 }
 
 </style>

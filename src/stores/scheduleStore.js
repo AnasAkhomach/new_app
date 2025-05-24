@@ -19,10 +19,10 @@ export const useScheduleStore = defineStore('schedule', {
         status: 'Scheduled',
         // These will be calculated/added after fetching schedule data based on sequence
         sdsTime: 30, // Example calculated SDST
-        precedingType: 'Knee Replacement', // Example preceding surgery type
+        precedingType: 'Initial', // Example preceding surgery type
         conflicts: [], // Example: ['Surgeon unavailable']
       },
-       {
+      {
         id: 's-2', patientId: 'P102', patientName: 'Bob Johnson',
         type: 'KNEE', fullType: 'Orthopedic - Knee Replacement',
         estimatedDuration: 120, duration: 120, priority: 'Medium',
@@ -35,7 +35,7 @@ export const useScheduleStore = defineStore('schedule', {
         precedingType: 'CABG', // Example preceding surgery type
         conflicts: [],
       },
-       {
+      {
         id: 's-3', patientId: 'P103', patientName: 'Charlie Davis',
         type: 'APPEN', fullType: 'General - Appendectomy',
         estimatedDuration: 60, duration: 60, priority: 'High',
@@ -44,11 +44,11 @@ export const useScheduleStore = defineStore('schedule', {
         surgeonId: 'SG3', surgeon: 'Dr. Sarah Chen',
         requiredSurgeons: ['Dr. Sarah Chen'], requiredStaffRoles: ['Circulating Nurse'], requiredEquipment: [],
         status: 'Scheduled',
-        sdsTime: 0, // Example calculated SDST (e.g., initial setup might be 0 or included in surgery duration)
+        sdsTime: 30, // Example calculated SDST
         precedingType: 'Initial', // First case of the day
         conflicts: [],
       },
-       {
+      {
         id: 's-4', patientId: 'P104', patientName: 'Donna Miller',
         type: 'CABG', fullType: 'Cardiac - Coronary Artery Bypass Graft',
         estimatedDuration: 240, duration: 240, priority: 'Medium',
@@ -61,11 +61,50 @@ export const useScheduleStore = defineStore('schedule', {
         precedingType: 'APPEN',
         conflicts: ['Surgeon Dr. Jane Smith unavailable (scheduled in OR1)'], // Example conflict
       },
+      {
+        id: 's-5', patientId: 'P105', patientName: 'Edward Thompson',
+        type: 'HERNI', fullType: 'General - Hernia Repair',
+        estimatedDuration: 90, duration: 90, priority: 'Medium',
+        startTime: '2023-10-27T14:45:00Z', endTime: '2023-10-27T16:15:00Z',
+        orId: 'OR1', orName: 'Operating Room 1',
+        surgeonId: 'SG3', surgeon: 'Dr. Sarah Chen',
+        requiredSurgeons: ['Dr. Sarah Chen'], requiredStaffRoles: ['Scrub Nurse'], requiredEquipment: [],
+        status: 'Scheduled',
+        sdsTime: 15, // Example calculated SDST
+        precedingType: 'KNEE', // Example preceding surgery type
+        conflicts: [],
+      },
+      {
+        id: 's-6', patientId: 'P106', patientName: 'Fiona Green',
+        type: 'CATAR', fullType: 'Ophthalmology - Cataract Surgery',
+        estimatedDuration: 45, duration: 45, priority: 'Low',
+        startTime: '2023-10-27T15:00:00Z', endTime: '2023-10-27T15:45:00Z',
+        orId: 'OR2', orName: 'Operating Room 2',
+        surgeonId: 'SG4', surgeon: 'Dr. Michael Wong',
+        requiredSurgeons: ['Dr. Michael Wong'], requiredStaffRoles: ['Scrub Nurse'], requiredEquipment: ['Phacoemulsification Machine'],
+        status: 'Scheduled',
+        sdsTime: 15, // Example calculated SDST
+        precedingType: 'CABG', // Example preceding surgery type
+        conflicts: [],
+      },
+      {
+        id: 's-7', patientId: 'P107', patientName: 'George Brown',
+        type: 'HIPRE', fullType: 'Orthopedic - Hip Replacement',
+        estimatedDuration: 150, duration: 150, priority: 'Medium',
+        startTime: '2023-10-27T16:15:00Z', endTime: '2023-10-27T18:45:00Z',
+        orId: 'OR2', orName: 'Operating Room 2',
+        surgeonId: 'SG2', surgeon: 'Dr. Bill Adams',
+        requiredSurgeons: ['Dr. Bill Adams'], requiredStaffRoles: ['Anesthetist', 'Scrub Nurse'], requiredEquipment: ['Orthopedic Power Tools'],
+        status: 'Scheduled',
+        sdsTime: 15, // Example calculated SDST
+        precedingType: 'CATAR', // Example preceding surgery type
+        conflicts: [],
+      },
     ],
     pendingSurgeries: [
       // Example Pending Surgeries (will be fetched from backend)
       {
-        id: 'p-1', patientId: 'P105', patientName: 'Ethan Brown',
+        id: 'p-1', patientId: 'P108', patientName: 'Ethan Brown',
         type: 'APPEN', fullType: 'General - Appendectomy',
         estimatedDuration: 75, duration: 75, priority: 'High',
         requestedDate: '2023-10-28T00:00:00Z', // Optional requested date
@@ -75,12 +114,45 @@ export const useScheduleStore = defineStore('schedule', {
         precedingType: null,
         conflicts: [],
       },
-       {
-        id: 'p-2', patientId: 'P106', patientName: 'Fiona Green',
+      {
+        id: 'p-2', patientId: 'P109', patientName: 'Fiona Green',
         type: 'KNEE', fullType: 'Orthopedic - Knee Replacement',
         estimatedDuration: 150, duration: 150, priority: 'Medium',
-         requestedDate: '2023-10-29T00:00:00Z',
+        requestedDate: '2023-10-29T00:00:00Z',
         requiredSurgeons: ['Dr. Bill Adams'], requiredStaffRoles: ['Scrub Nurse'], requiredEquipment: ['Arthroscope'],
+        status: 'Pending',
+        sdsTime: null,
+        precedingType: null,
+        conflicts: [],
+      },
+      {
+        id: 'p-3', patientId: 'P110', patientName: 'Henry Wilson',
+        type: 'HERNI', fullType: 'General - Hernia Repair',
+        estimatedDuration: 90, duration: 90, priority: 'Low',
+        requestedDate: '2023-10-28T00:00:00Z',
+        requiredSurgeons: ['Dr. Sarah Chen'], requiredStaffRoles: ['Scrub Nurse'], requiredEquipment: [],
+        status: 'Pending',
+        sdsTime: null,
+        precedingType: null,
+        conflicts: [],
+      },
+      {
+        id: 'p-4', patientId: 'P111', patientName: 'Isabella Martinez',
+        type: 'CATAR', fullType: 'Ophthalmology - Cataract Surgery',
+        estimatedDuration: 45, duration: 45, priority: 'Medium',
+        requestedDate: '2023-10-28T00:00:00Z',
+        requiredSurgeons: ['Dr. Michael Wong'], requiredStaffRoles: ['Scrub Nurse'], requiredEquipment: ['Phacoemulsification Machine'],
+        status: 'Pending',
+        sdsTime: null,
+        precedingType: null,
+        conflicts: [],
+      },
+      {
+        id: 'p-5', patientId: 'P112', patientName: 'James Taylor',
+        type: 'HIPRE', fullType: 'Orthopedic - Hip Replacement',
+        estimatedDuration: 150, duration: 150, priority: 'High',
+        requestedDate: '2023-10-29T00:00:00Z',
+        requiredSurgeons: ['Dr. Bill Adams'], requiredStaffRoles: ['Anesthetist', 'Scrub Nurse'], requiredEquipment: ['Orthopedic Power Tools'],
         status: 'Pending',
         sdsTime: null,
         precedingType: null,
@@ -98,16 +170,32 @@ export const useScheduleStore = defineStore('schedule', {
      equipment: [], // Full equipment list would be here
 
     // --- SDST Data (Minimal Example) ---
+    // Surgery type definitions with full names
+    surgeryTypes: {
+      'CABG': { fullName: 'Cardiac - Coronary Artery Bypass Graft', code: 'CABG' },
+      'KNEE': { fullName: 'Orthopedic - Knee Replacement', code: 'KNEE' },
+      'APPEN': { fullName: 'General - Appendectomy', code: 'APPEN' },
+      'HERNI': { fullName: 'General - Hernia Repair', code: 'HERNI' },
+      'CATAR': { fullName: 'Ophthalmology - Cataract Surgery', code: 'CATAR' },
+      'HIPRE': { fullName: 'Orthopedic - Hip Replacement', code: 'HIPRE' },
+    },
+
     sdsRules: {
-      'CABG': { 'KNEE': 30, 'APPEN': 45 },
-      'KNEE': { 'CABG': 45, 'APPEN': 15 },
-      'APPEN': { 'CABG': 30, 'KNEE': 15 },
+      'CABG': { 'KNEE': 30, 'APPEN': 45, 'HERNI': 30, 'CATAR': 45, 'HIPRE': 30 },
+      'KNEE': { 'CABG': 45, 'APPEN': 15, 'HERNI': 20, 'CATAR': 30, 'HIPRE': 15 },
+      'APPEN': { 'CABG': 30, 'KNEE': 15, 'HERNI': 15, 'CATAR': 30, 'HIPRE': 30 },
+      'HERNI': { 'CABG': 45, 'KNEE': 20, 'APPEN': 15, 'CATAR': 30, 'HIPRE': 25 },
+      'CATAR': { 'CABG': 45, 'KNEE': 30, 'APPEN': 30, 'HERNI': 30, 'HIPRE': 30 },
+      'HIPRE': { 'CABG': 45, 'KNEE': 15, 'APPEN': 30, 'HERNI': 25, 'CATAR': 30 },
       // Add rules for 'Initial' preceding type if different from initialSetupTimes
     },
     initialSetupTimes: {
         'CABG': 60,
         'KNEE': 45,
         'APPEN': 30,
+        'HERNI': 30,
+        'CATAR': 20,
+        'HIPRE': 45,
     },
 
 
@@ -374,11 +462,75 @@ export const useScheduleStore = defineStore('schedule', {
     },
 
     // Action to update the Gantt view mode
-     updateGanttViewMode(mode) {
-        this.ganttViewMode = mode;
-        // Logic to adjust currentDateRange based on mode (Day, Week, Month)
-        // and potentially refetch data would go here.
-     },
+    updateGanttViewMode(mode) {
+      this.ganttViewMode = mode;
+
+      // Adjust date range based on the new view mode
+      const currentDate = new Date();
+
+      if (mode === 'Day') {
+        // Set range to current day (7am to 7pm)
+        const start = new Date(currentDate);
+        start.setHours(7, 0, 0, 0);
+
+        const end = new Date(currentDate);
+        end.setHours(19, 0, 0, 0);
+
+        this.currentDateRange = { start, end };
+      }
+      else if (mode === 'Week') {
+        // Set range to current week (Monday to Sunday)
+        const start = new Date(currentDate);
+        const day = start.getDay();
+        const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Sunday
+
+        start.setDate(diff);
+        start.setHours(0, 0, 0, 0);
+
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+
+        this.currentDateRange = { start, end };
+      }
+
+      // Reload data for the new date range
+      this.loadInitialData();
+    },
+
+    // Navigate the Gantt chart date range (prev/next)
+    navigateGanttDate(direction) {
+      const { start, end } = this.currentDateRange;
+      let newStart, newEnd;
+
+      if (this.ganttViewMode === 'Day') {
+        // Navigate by one day
+        const dayOffset = direction === 'prev' ? -1 : 1;
+        newStart = new Date(start);
+        newStart.setDate(start.getDate() + dayOffset);
+
+        newEnd = new Date(end);
+        newEnd.setDate(end.getDate() + dayOffset);
+      }
+      else if (this.ganttViewMode === 'Week') {
+        // Navigate by one week
+        const weekOffset = direction === 'prev' ? -7 : 7;
+        newStart = new Date(start);
+        newStart.setDate(start.getDate() + weekOffset);
+
+        newEnd = new Date(end);
+        newEnd.setDate(end.getDate() + weekOffset);
+      }
+
+      this.currentDateRange = { start: newStart, end: newEnd };
+      this.loadInitialData();
+    },
+
+    // Reset the Gantt chart to today
+    resetGanttToToday() {
+      // Reuse the updateGanttViewMode logic to reset to today with current view mode
+      this.updateGanttViewMode(this.ganttViewMode);
+    },
 
      // Placeholder action for editing a surgery
      async editSurgery(surgeryId, updatedData) {
@@ -454,6 +606,156 @@ export const useScheduleStore = defineStore('schedule', {
         } finally {
             this.isLoading = false;
         }
+     },
+
+     // SDST Management Actions
+
+     // Update SDST value between two surgery types
+     updateSDSTValue(fromType, toType, value) {
+       this.isLoading = true;
+       this.error = null;
+
+       try {
+         console.log(`Updating SDST value from ${fromType} to ${toType}: ${value} minutes`);
+
+         // In a real app, this would call an API
+         // await updateSDSTValueApi(fromType, toType, value);
+
+         // Simulate API delay
+         setTimeout(() => {
+           // Ensure the fromType exists in the rules
+           if (!this.sdsRules[fromType]) {
+             this.sdsRules[fromType] = {};
+           }
+
+           // Update the SDST value
+           this.sdsRules[fromType][toType] = value;
+
+           // Re-process the schedule to update any affected surgeries
+           this.processScheduleData();
+
+           this.isLoading = false;
+           console.log(`SDST value updated successfully`);
+         }, 300);
+       } catch (err) {
+         this.error = 'Failed to update SDST value.';
+         console.error("SDST update failed:", err);
+         this.isLoading = false;
+       }
+     },
+
+     // Update initial setup time for a surgery type
+     updateInitialSetupTime(surgeryType, value) {
+       this.isLoading = true;
+       this.error = null;
+
+       try {
+         console.log(`Updating initial setup time for ${surgeryType}: ${value} minutes`);
+
+         // In a real app, this would call an API
+         // await updateInitialSetupTimeApi(surgeryType, value);
+
+         // Simulate API delay
+         setTimeout(() => {
+           // Update the initial setup time
+           this.initialSetupTimes[surgeryType] = value;
+
+           // Re-process the schedule to update any affected surgeries
+           this.processScheduleData();
+
+           this.isLoading = false;
+           console.log(`Initial setup time updated successfully`);
+         }, 300);
+       } catch (err) {
+         this.error = 'Failed to update initial setup time.';
+         console.error("Initial setup time update failed:", err);
+         this.isLoading = false;
+       }
+     },
+
+     // Add a new surgery type with SDST rules
+     addNewSurgeryType(code, fullName, initialSetupTime) {
+       this.isLoading = true;
+       this.error = null;
+
+       try {
+         console.log(`Adding new surgery type: ${code} - ${fullName}`);
+
+         // In a real app, this would call an API
+         // await addSurgeryTypeApi(code, fullName, initialSetupTime);
+
+         // Simulate API delay
+         setTimeout(() => {
+           // Add to surgery types
+           this.surgeryTypes[code] = {
+             fullName: fullName,
+             code: code
+           };
+
+           // Add initial setup time
+           this.initialSetupTimes[code] = initialSetupTime;
+
+           // Create empty SDST rules for the new type
+           this.sdsRules[code] = {};
+
+           // Set default SDST values for existing types
+           Object.keys(this.sdsRules).forEach(existingType => {
+             if (existingType !== code) {
+               // Default value from new type to existing type
+               this.sdsRules[code][existingType] = 30;
+
+               // Default value from existing type to new type
+               this.sdsRules[existingType][code] = 30;
+             }
+           });
+
+           this.isLoading = false;
+           console.log(`New surgery type added successfully`);
+         }, 500);
+       } catch (err) {
+         this.error = 'Failed to add new surgery type.';
+         console.error("Adding surgery type failed:", err);
+         this.isLoading = false;
+       }
+     },
+
+     // Delete a surgery type and its SDST rules
+     deleteSurgeryType(code) {
+       this.isLoading = true;
+       this.error = null;
+
+       try {
+         console.log(`Deleting surgery type: ${code}`);
+
+         // In a real app, this would call an API
+         // await deleteSurgeryTypeApi(code);
+
+         // Simulate API delay
+         setTimeout(() => {
+           // Remove from surgery types
+           delete this.surgeryTypes[code];
+
+           // Remove from initial setup times
+           delete this.initialSetupTimes[code];
+
+           // Remove from SDST rules (both as source and target)
+           delete this.sdsRules[code];
+
+           // Remove references to this type in other rules
+           Object.keys(this.sdsRules).forEach(existingType => {
+             if (this.sdsRules[existingType][code]) {
+               delete this.sdsRules[existingType][code];
+             }
+           });
+
+           this.isLoading = false;
+           console.log(`Surgery type deleted successfully`);
+         }, 500);
+       } catch (err) {
+         this.error = 'Failed to delete surgery type.';
+         console.error("Deleting surgery type failed:", err);
+         this.isLoading = false;
+       }
      }
   }
 });
